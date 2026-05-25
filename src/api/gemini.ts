@@ -1,0 +1,234 @@
+/**
+ * WorldSim — LLM API Integration Layer
+ * 
+ * Supports multiple providers:
+ * - DeepSeek (default, cheap, fast, JSON mode supported)
+ * - Gemini (free tier backup)
+ * 
+ * All providers use the same interface: callGemini(prompt, type) 
+ * (function name kept for backward compatibility)
+ */
+
+import type { DebugLog } from '../engine/types'
+
+// ============================================================
+// Model Configuration
+// ============================================================
+
+export type LLMProvider = 'deepseek' | 'gemini'
+
+export type GeminiModel = 
+  | 'deepseek-chat'
+  | 'deepseek-reasoner'
+  | 'gemini-2.0-flash'
+  | 'gemini-2.0-flash-lite'
+  | 'gemini-1.5-flash'
+
+export const MODEL_OPTIONS: { id: GeminiModel; label: string; description: string; provider: LLMProvider }[] = [
+  { id: 'deepseek-chat', label: 'DeepSeek V3', description: 'Best value: ¥1/M input, ¥2/M output', provider: 'deepseek' },
+  { id: 'deepseek-reasoner', label: 'DeepSeek R1', description: 'Deep reasoning, higher cost', provider: 'deepseek' },
+  { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', description: 'Free tier, 15 RPM', provider: 'gemini' },
+  { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', description: 'Free tier, 30 RPM', provider: 'gemini' },
+  { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', description: 'Free tier fallback', provider: 'gemini' },
+]
+
+// ============================================================
+// State
+// ============================================================
+
+let apiKey: string = ''
+let currentModel: GeminiModel = 'deepseek-chat'
+let genAI: any = null  // GoogleGenerativeAI instance (lazy loaded for Gemini)
+
+export function initGemini(key: string, model?: GeminiModel) {
+  apiKey = key
+  if (model) currentModel = model
+}
+
+export function setModel(model: GeminiModel) {
+  currentModel = model
+}
+
+export function getModel(): GeminiModel {
+  return currentModel
+}
+
+export function isGeminiReady(): boolean {
+  return apiKey.length > 0
+}
+
+function getProvider(): LLMProvider {
+  const opt = MODEL_OPTIONS.find(m => m.id === currentModel)
+  return opt?.provider || 'deepseek'
+}
+
+// ============================================================
+// DeepSeek API (OpenAI-compatible)
+// ============================================================
+
+const DEEPSEEK_BASE_URL = 'https://api.deepseek.com'
+
+async function callDeepSeek(
+  prompt: string,
+  type: 'world_gen' | 'action' | 'agent_tick'
+): Promise<{ text: string; promptTokens: number; responseTokens: number }> {
+  const tempMap = { world_gen: 0.9, action: 0.7, agent_tick: 0.6 }
+  const tokenMap = { world_gen: 4096, action: 2048, agent_tick: 512 }
+
+  const response = await fetch(`${DEEPSEEK_BASE_URL}/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: currentModel,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a world simulation engine. Always output valid JSON only. No markdown, no explanation, just the JSON object as specified in the user prompt.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: tempMap[type],
+      max_tokens: tokenMap[type],
+      stream: false,
+    }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    const errorMsg = errorData.error?.message || `HTTP ${response.status}`
+    throw new Error(`DeepSeek API error: ${errorMsg}`)
+  }
+
+  const result = await response.json()
+  const text = result.choices?.[0]?.message?.content || ''
+  const usage = result.usage || {}
+
+  return {
+    text,
+    promptTokens: usage.prompt_tokens || Math.ceil(prompt.length / 4),
+    responseTokens: usage.completion_tokens || Math.ceil(text.length / 4),
+  }
+}
+
+// ============================================================
+// Gemini API (Google)
+// ============================================================
+
+async function callGeminiAPI(
+  prompt: string,
+  type: 'world_gen' | 'action' | 'agent_tick'
+): Promise<{ text: string; promptTokens: number; responseTokens: number }> {
+  // Lazy load GoogleGenerativeAI
+  if (!genAI) {
+    const { GoogleGenerativeAI } = await import('@google/generative-ai')
+    genAI = new GoogleGenerativeAI(apiKey)
+  }
+
+  const tempMap = { world_gen: 0.9, action: 0.7, agent_tick: 0.6 }
+  const tokenMap = { world_gen: 2048, action: 1024, agent_tick: 512 }
+
+  const model = genAI.getGenerativeModel({
+    model: currentModel,
+    generationConfig: {
+      responseMimeType: 'application/json',
+      temperature: tempMap[type],
+      maxOutputTokens: tokenMap[type],
+    },
+  })
+
+  const result = await model.generateContent(prompt)
+  const response = result.response
+  const text = response.text()
+
+  return {
+    text,
+    promptTokens: Math.ceil(prompt.length / 4),
+    responseTokens: Math.ceil(text.length / 4),
+  }
+}
+
+// ============================================================
+// Unified API Entry Point
+// ============================================================
+
+export async function callGemini(
+  prompt: string,
+  type: 'world_gen' | 'action' | 'agent_tick'
+): Promise<{ data: any; debug: DebugLog }> {
+  if (!apiKey) throw new Error('API key not set. Please enter your API key.')
+
+  const provider = getProvider()
+  const maxRetries = 2
+  let lastError: any = null
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const startTime = Date.now()
+
+    try {
+      // Call the appropriate provider
+      const { text, promptTokens, responseTokens } = provider === 'deepseek'
+        ? await callDeepSeek(prompt, type)
+        : await callGeminiAPI(prompt, type)
+
+      const latencyMs = Date.now() - startTime
+
+      // Parse JSON response
+      let data: any
+      try {
+        data = JSON.parse(text)
+      } catch {
+        // Try to extract JSON from markdown code block if present
+        const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+        if (jsonMatch) {
+          data = JSON.parse(jsonMatch[1])
+        } else {
+          throw new Error(`Failed to parse JSON response: ${text.slice(0, 200)}`)
+        }
+      }
+
+      const debug: DebugLog = {
+        timestamp: Date.now(),
+        type,
+        promptTokens,
+        responseTokens,
+        prompt,
+        response: text,
+        latencyMs,
+      }
+
+      return { data, debug }
+    } catch (error: any) {
+      lastError = error
+      const latencyMs = Date.now() - startTime
+
+      // Retry on rate limit errors
+      const isRateLimit = error.message?.includes('429') || error.message?.includes('rate')
+      if (isRateLimit && attempt < maxRetries) {
+        const waitMs = (attempt + 1) * 5000 // 5s, 10s (DeepSeek is faster to recover)
+        console.warn(`[WorldSim] Rate limited (${currentModel}). Retrying in ${waitMs / 1000}s... (attempt ${attempt + 1}/${maxRetries})`)
+        await new Promise(resolve => setTimeout(resolve, waitMs))
+        continue
+      }
+
+      const debug: DebugLog = {
+        timestamp: Date.now(),
+        type,
+        promptTokens: Math.ceil(prompt.length / 4),
+        responseTokens: 0,
+        prompt,
+        response: `ERROR: ${error.message}`,
+        latencyMs,
+      }
+      throw Object.assign(error, { debug })
+    }
+  }
+
+  throw lastError
+}
