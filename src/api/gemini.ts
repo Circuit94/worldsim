@@ -1,21 +1,53 @@
 /**
  * WorldSim — LLM API Integration Layer
  * 
- * Supports multiple providers:
+ * Supports multiple providers via a unified LLMProvider interface:
  * - DeepSeek (default, cheap, fast, JSON mode supported)
  * - Gemini (free tier backup)
+ * - Any OpenAI-compatible endpoint (custom providers)
  * 
- * All providers use the same interface: callGemini(prompt, type) 
- * (function name kept for backward compatibility)
+ * Architecture:
+ * - LLMProviderInterface defines the contract for all providers
+ * - callGemini() is the unified entry point (name kept for backward compatibility)
+ * - New providers can be added by implementing LLMProviderInterface
  */
 
 import type { DebugLog } from '../engine/types'
 
 // ============================================================
+// LLM Provider Interface (Abstraction Layer)
+// ============================================================
+
+/**
+ * Unified interface for LLM providers.
+ * Any provider (OpenAI, Anthropic, local models) can be integrated
+ * by implementing this interface.
+ */
+export interface LLMProviderInterface {
+  /** Unique provider identifier */
+  readonly name: string
+  /** Send a prompt and receive structured text response */
+  call(prompt: string, options: LLMCallOptions): Promise<LLMCallResult>
+}
+
+export interface LLMCallOptions {
+  type: 'world_gen' | 'action' | 'agent_tick'
+  temperature?: number
+  maxTokens?: number
+  jsonMode?: boolean
+}
+
+export interface LLMCallResult {
+  text: string
+  promptTokens: number
+  responseTokens: number
+}
+
+// ============================================================
 // Model Configuration
 // ============================================================
 
-export type LLMProvider = 'deepseek' | 'gemini'
+export type LLMProvider = 'deepseek' | 'gemini' | 'custom'
 
 export type GeminiModel = 
   | 'deepseek-chat'
@@ -31,6 +63,33 @@ export const MODEL_OPTIONS: { id: GeminiModel; label: string; description: strin
   { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', description: '免费额度，30 次/分钟', provider: 'gemini' },
   { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', description: '免费额度备选', provider: 'gemini' },
 ]
+
+// ============================================================
+// Custom Provider Registry
+// ============================================================
+
+let customProvider: LLMProviderInterface | null = null
+
+/**
+ * Register a custom LLM provider that implements LLMProviderInterface.
+ * Once registered, set model to any custom model name and it will route through this provider.
+ * 
+ * @example
+ * registerCustomProvider({
+ *   name: 'my-local-llm',
+ *   async call(prompt, options) {
+ *     const res = await fetch('http://localhost:8080/v1/chat/completions', { ... })
+ *     return { text: res.text, promptTokens: 0, responseTokens: 0 }
+ *   }
+ * })
+ */
+export function registerCustomProvider(provider: LLMProviderInterface): void {
+  customProvider = provider
+}
+
+export function getCustomProvider(): LLMProviderInterface | null {
+  return customProvider
+}
 
 // ============================================================
 // State
@@ -58,6 +117,9 @@ export function isGeminiReady(): boolean {
 }
 
 function getProvider(): LLMProvider {
+  if (customProvider && !MODEL_OPTIONS.find(m => m.id === currentModel)) {
+    return 'custom'
+  }
   const opt = MODEL_OPTIONS.find(m => m.id === currentModel)
   return opt?.provider || 'deepseek'
 }
@@ -162,7 +224,7 @@ export async function callGemini(
   prompt: string,
   type: 'world_gen' | 'action' | 'agent_tick'
 ): Promise<{ data: any; debug: DebugLog }> {
-  if (!apiKey) throw new Error('API 密钥未设置，请先输入你的 API Key。')
+  if (!apiKey && !customProvider) throw new Error('API 密钥未设置，请先输入你的 API Key。')
 
   const provider = getProvider()
   const maxRetries = 2
@@ -173,9 +235,22 @@ export async function callGemini(
 
     try {
       // Call the appropriate provider
-      const { text, promptTokens, responseTokens } = provider === 'deepseek'
-        ? await callDeepSeek(prompt, type)
-        : await callGeminiAPI(prompt, type)
+      let callResult: { text: string; promptTokens: number; responseTokens: number }
+      if (provider === 'custom' && customProvider) {
+        const tempMap = { world_gen: 0.9, action: 0.7, agent_tick: 0.6 }
+        const tokenMap = { world_gen: 4096, action: 2048, agent_tick: 512 }
+        callResult = await customProvider.call(prompt, {
+          type,
+          temperature: tempMap[type],
+          maxTokens: tokenMap[type],
+          jsonMode: true,
+        })
+      } else if (provider === 'deepseek') {
+        callResult = await callDeepSeek(prompt, type)
+      } else {
+        callResult = await callGeminiAPI(prompt, type)
+      }
+      const { text, promptTokens, responseTokens } = callResult
 
       const latencyMs = Date.now() - startTime
 

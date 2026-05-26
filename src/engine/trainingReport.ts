@@ -187,7 +187,7 @@ function computeCompetencies(
       )
     } else {
       // Fallback：基于可解释的行为指标计算，每个维度有独立的评估逻辑
-      score = computeFallbackScore(dim.key, agents, decisions)
+      score = computeHeuristicBaseline(dim.key, agents, decisions)
     }
 
     const grade = scoreToGrade(score)
@@ -199,17 +199,27 @@ function computeCompetencies(
 }
 
 /**
- * 可解释的 fallback 评分：当 LLM 未返回 eval tags 时，
- * 基于实际行为数据为每个维度独立计算分数。
+ * 启发式基线评分（Heuristic Baseline）：当 LLM 未返回 eval tags 时的降级方案。
  * 
- * 每个维度的评分逻辑：
- * - 分析判断力：决策平均长度（信息密度）+ 是否包含分析性关键词
- * - 决策魄力：决策数量密度 + 决策中明确立场的比例
- * - 利益相关方管理：Agent 态度变化幅度 + 正向态度 Agent 比例
- * - 沟通影响力：决策平均长度 + Agent 态度正向变化次数
- * - 战略格局：决策中包含长期/全局关键词的比例 + 决策多样性
+ * 设计原则：
+ * - 这是一个"有总比没有好"的降级方案，不是精确评估
+ * - 基于可观测的行为指标（决策长度、关键词命中、Agent 态度变化）
+ * - 每个维度有独立的评估逻辑，避免单一指标主导
+ * - 分数范围 [20, 95]，避免极端值误导用户
+ * 
+ * 局限性（已知）：
+ * - 关键词匹配无法捕捉语义深度（"因为"不等于真正的因果分析）
+ * - 决策长度与质量不完全正相关
+ * - 无法评估决策的时机和上下文适当性
+ * 
+ * 当 LLM eval tags 可用时，此函数不会被调用。
+ * 
+ * @param dimKey - 维度标识符
+ * @param agents - 当前世界中的所有 Agent
+ * @param decisions - 用户做出的所有决策文本
+ * @returns 0-100 的启发式分数
  */
-function computeFallbackScore(dimKey: string, agents: Agent[], decisions: string[]): number {
+export function computeHeuristicBaseline(dimKey: string, agents: Agent[], decisions: string[]): number {
   const decisionCount = decisions.length
   if (decisionCount === 0) return 35  // 无决策数据，给低分
 
@@ -407,10 +417,16 @@ function generateNextSteps(grade: string, improvements: string[]): string[] {
 function generateEvidence(dimKey: string, decisions: string[], agents: Agent[]): string[] {
   const evidence: string[] = []
   
-  // 基于决策内容推断证据
   if (decisions.length > 0) {
-    const lastDecision = decisions[decisions.length - 1]
-    if (dimKey === 'analytical' && lastDecision.length > 50) {
+    // 优先引用用户的实际决策原文作为证据
+    const relevantDecisions = findRelevantDecisions(dimKey, decisions)
+    for (const d of relevantDecisions.slice(0, 2)) {
+      const quoted = d.length > 60 ? d.slice(0, 57) + '...' : d
+      evidence.push(`用户决策："${quoted}"`)
+    }
+
+    // 补充统计性证据
+    if (dimKey === 'analytical' && decisions[decisions.length - 1].length > 50) {
       evidence.push('决策描述详细，体现了信息整合能力')
     }
     if (dimKey === 'decisiveness' && decisions.length >= 8) {
@@ -438,6 +454,21 @@ function generateEvidence(dimKey: string, decisions: string[], agents: Agent[]):
   }
 
   return evidence
+}
+
+/**
+ * 根据维度关键词找到最相关的用户决策，用于报告中引用原文。
+ */
+function findRelevantDecisions(dimKey: string, decisions: string[]): string[] {
+  const keywordMap: Record<string, string[]> = {
+    analytical: ['分析', '判断', '考虑', '因为', '基于', '评估', '数据', '信息', '逻辑', '推理'],
+    decisiveness: ['决定', '必须', '立即', '直接', '明确', '坚持', '拒绝', '要求', '果断'],
+    stakeholder: ['平衡', '各方', '协调', '兼顾', '利益', '诉求', '合作', '妥协', '共赢'],
+    influence: ['建议', '说服', '解释', '强调', '沟通', '表达', '阐述', '提议', '引导'],
+    strategic: ['长期', '未来', '全局', '整体', '战略', '规划', '布局', '权衡', '优先'],
+  }
+  const keywords = keywordMap[dimKey] || []
+  return decisions.filter(d => keywords.some(k => d.includes(k)))
 }
 
 function generateSuggestion(dimKey: string, grade: string): string {

@@ -42,6 +42,7 @@ export interface SDKConfig {
   model?: GeminiModel
   mode?: ScenarioMode
   maxSteps?: number               // Auto-terminate after N steps (default: 100)
+  timeoutMs?: number              // Timeout for LLM calls in ms (default: 30000)
   enableAgentTicks?: boolean      // Run agent behavior between steps (default: true)
   onStep?: (event: StepEvent) => void  // Real-time step callback
   onError?: (error: SDKError) => void  // Error callback
@@ -72,7 +73,7 @@ export interface StepMetrics {
 }
 
 export interface SDKError {
-  code: 'RATE_LIMIT' | 'API_ERROR' | 'VALIDATION' | 'MAX_STEPS' | 'SESSION_ENDED'
+  code: 'RATE_LIMIT' | 'API_ERROR' | 'VALIDATION' | 'MAX_STEPS' | 'SESSION_ENDED' | 'TIMEOUT'
   message: string
   retryable: boolean
 }
@@ -125,6 +126,7 @@ export class WorldSimEngine {
       model: config.model || 'gemini-2.0-flash',
       mode: config.mode || 'game',
       maxSteps: config.maxSteps || 100,
+      timeoutMs: config.timeoutMs || 30000,
       enableAgentTicks: config.enableAgentTicks ?? true,
       onStep: config.onStep || (() => {}),
       onError: config.onError || (() => {}),
@@ -145,10 +147,10 @@ export class WorldSimEngine {
       : scenario.worldGenModifier
 
     try {
-      const { world, debug } = await generateWorld(
-        sessionConfig.theme,
-        sessionConfig.seed,
-        modifier
+      const { world, debug } = await withTimeout(
+        generateWorld(sessionConfig.theme, sessionConfig.seed, modifier),
+        this.config.timeoutMs,
+        'createSession'
       )
 
       world.mode = mode
@@ -524,15 +526,60 @@ function categorizeActions(actions: string[]): Record<string, number> {
     const lower = action.toLowerCase()
     let type = 'other'
 
+    // English keywords
     if (/talk|ask|say|speak|greet|introduce/i.test(lower)) type = 'social'
     else if (/look|examine|search|inspect|observe/i.test(lower)) type = 'explore'
     else if (/move|go|walk|enter|leave|head/i.test(lower)) type = 'navigate'
     else if (/attack|fight|hit|defend|strike/i.test(lower)) type = 'combat'
     else if (/take|grab|pick|use|open|activate/i.test(lower)) type = 'interact'
     else if (/wait|rest|hide|sleep/i.test(lower)) type = 'passive'
+    // Chinese keywords (培训模式下用户通常用中文输入)
+    else if (/说|问|谈|沟通|交流|介绍|建议|提议|解释|表达|回应|回答/.test(action)) type = 'social'
+    else if (/看|观察|检查|调查|了解|分析|研究|查看|审视|探索/.test(action)) type = 'explore'
+    else if (/去|走|前往|进入|离开|移动|到达|返回/.test(action)) type = 'navigate'
+    else if (/攻击|战斗|打|防御|反击|对抗/.test(action)) type = 'combat'
+    else if (/拿|取|使用|打开|激活|操作|拾取|获取/.test(action)) type = 'interact'
+    else if (/等待|休息|隐藏|等|观望|按兵不动/.test(action)) type = 'passive'
+    // Training-specific categories (Chinese)
+    else if (/决定|选择|决策|拒绝|同意|接受|否决|批准/.test(action)) type = 'decide'
+    else if (/协调|平衡|妥协|整合|调解|斡旋/.test(action)) type = 'coordinate'
 
     categories[type] = (categories[type] || 0) + 1
   }
 
   return categories
+}
+
+// ============================================================
+// Timeout Utility
+// ============================================================
+
+/**
+ * Wraps a promise with a timeout. If the promise doesn't resolve within
+ * the specified duration, it rejects with a TIMEOUT SDKError.
+ * 
+ * @param promise - The async operation to wrap
+ * @param ms - Timeout in milliseconds
+ * @param operation - Name of the operation (for error messages)
+ */
+async function withTimeout<T>(promise: Promise<T>, ms: number, operation: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout>
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject({
+        code: 'TIMEOUT' as const,
+        message: `Operation "${operation}" timed out after ${ms}ms`,
+        retryable: true,
+      })
+    }, ms)
+  })
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise])
+    clearTimeout(timeoutId!)
+    return result
+  } catch (error) {
+    clearTimeout(timeoutId!)
+    throw error
+  }
 }

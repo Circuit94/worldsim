@@ -56,3 +56,15 @@ export { executeAgentTick, applyAgentTick, getTickingAgent, retainWithImportance
 export { validateAndCorrect, checkRuleTriggers, markRulesFired } from './ruleEngine'
 export { checkConnectivity, repairConnectivity, validateAndRepairMap } from './mapValidator'
 export type { ConnectivityReport } from './mapValidator'
+
+// Agent-to-Agent dialogue system
+export { triggerAgentDialogues, applyDialogueResult, buildAgentDialoguePrompt } from './agentDialogue'
+export type { AgentDialogueResult } from './agentDialogue'
+
+// Training report
+export { generateTrainingReport, parseStructuredEvalTags, reportToMarkdown, computeHeuristicBaseline } from './trainingReport'
+export type { TrainingReport, CompetencyScore, StakeholderOutcome } from './trainingReport'
+
+// LLM Provider interface (for custom integrations)
+export { registerCustomProvider } from '../api/gemini'
+export type { LLMProviderInterface, LLMCallOptions, LLMCallResult } from '../api/gemini'
