@@ -10,10 +10,14 @@
  * - 无任何游戏化元素（无HP/地图/背包/emoji按钮）
  */
 
+import { useState } from 'react'
 import { useGameStore } from '../store/gameStore'
+import { generateTrainingReport, reportToMarkdown, type TrainingReport } from '../engine/trainingReport'
 
 export default function TrainingView() {
   const { world, player, narrativeLog, choices, isProcessing, performAction, phase } = useGameStore()
+  const [report, setReport] = useState<TrainingReport | null>(null)
+  const [showReport, setShowReport] = useState(false)
   
   if (!world || !player) return null
 
@@ -270,13 +274,37 @@ export default function TrainingView() {
             </div>
           )}
 
-          {/* 场景结束后的复盘提示 */}
+          {/* 场景结束后的报告生成 */}
           {phase === 'gameover' && (
             <div className="bg-amber-950/20 border border-amber-800/50 rounded-lg p-3">
               <h3 className="text-xs text-amber-300 font-medium mb-2">评估完成</h3>
-              <p className="text-[10px] text-gray-400 leading-relaxed">
-                情景模拟已结束。完整评估报告将基于您在{maxSteps}轮决策中展现的能力维度进行综合评分。
-              </p>
+              {!report ? (
+                <button
+                  onClick={() => {
+                    const r = generateTrainingReport(world, narrativeLog, stepCount)
+                    setReport(r)
+                    setShowReport(true)
+                  }}
+                  className="w-full px-4 py-2 bg-amber-900/50 border border-amber-700/50 rounded-lg text-sm text-amber-200 hover:bg-amber-800/50 transition-all"
+                >
+                  生成评估报告
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-amber-200">
+                      综合评级：<strong className="text-lg">{report.overallGrade}</strong>（{report.overallScore}分）
+                    </span>
+                    <button
+                      onClick={() => setShowReport(!showReport)}
+                      className="text-[10px] text-amber-400/70 hover:text-amber-300 transition-colors"
+                    >
+                      {showReport ? '收起报告' : '展开报告'}
+                    </button>
+                  </div>
+                  {showReport && <ReportPanel report={report} />}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -410,4 +438,116 @@ function getPhaseInsights(agents: any[], stepCount: number, narrativeLog: any[])
   }
 
   return insights.map((text, i) => <p key={i}>• {text}</p>)
+}
+
+// ============================================================
+// 评估报告面板
+// ============================================================
+
+function ReportPanel({ report }: { report: TrainingReport }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    const md = reportToMarkdown(report)
+    navigator.clipboard.writeText(md).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div className="space-y-3 mt-2">
+      {/* 导出按钮 */}
+      <button
+        onClick={handleCopy}
+        className="text-[10px] px-2 py-1 bg-gray-800 border border-gray-700 rounded text-gray-400 hover:text-gray-200 transition-colors"
+      >
+        {copied ? '已复制 Markdown ✓' : '复制完整报告 (Markdown)'}
+      </button>
+
+      {/* 能力雷达总览 */}
+      <div className="bg-gray-950/60 rounded border border-gray-800/80 p-3">
+        <h4 className="text-[11px] text-gray-400 font-medium mb-2">能力维度评估</h4>
+        <div className="space-y-2">
+          {report.competencies.map(c => (
+            <div key={c.dimension}>
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-[10px] text-gray-300">{c.dimension}</span>
+                <span className={`text-[9px] px-1 py-0.5 rounded font-mono font-medium ${
+                  c.grade === 'S' ? 'text-purple-400 bg-purple-950/50' :
+                  c.grade === 'A' ? 'text-emerald-400 bg-emerald-950/50' :
+                  c.grade === 'B' ? 'text-amber-400 bg-amber-950/50' :
+                  c.grade === 'C' ? 'text-orange-400 bg-orange-950/50' :
+                  'text-red-400 bg-red-950/50'
+                }`}>{c.grade} ({c.score})</span>
+              </div>
+              <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${
+                    c.score >= 75 ? 'bg-emerald-500' : c.score >= 50 ? 'bg-amber-500' : 'bg-orange-500'
+                  }`}
+                  style={{ width: `${c.score}%` }}
+                />
+              </div>
+              <p className="text-[9px] text-gray-600 mt-0.5">{c.suggestion}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 利益相关方结果 */}
+      <div className="bg-gray-950/60 rounded border border-gray-800/80 p-3">
+        <h4 className="text-[11px] text-gray-400 font-medium mb-2">利益相关方结果</h4>
+        <div className="space-y-1.5">
+          {report.stakeholders.map(s => (
+            <div key={s.name} className="flex items-center justify-between text-[10px]">
+              <span className="text-gray-300">{s.name}</span>
+              <span className={`font-mono ${
+                s.relationship === 'allied' ? 'text-emerald-400' :
+                s.relationship === 'opposed' ? 'text-red-400' :
+                'text-gray-500'
+              }`}>
+                {s.finalAttitude > 0 ? '+' : ''}{s.finalAttitude}
+                <span className="text-gray-600 ml-1">
+                  ({s.attitudeChange > 0 ? '↑' : s.attitudeChange < 0 ? '↓' : '→'}{Math.abs(s.attitudeChange)})
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 总评 */}
+      <div className="bg-gray-950/60 rounded border border-gray-800/80 p-3">
+        <h4 className="text-[11px] text-gray-400 font-medium mb-2">总评</h4>
+        <p className="text-[10px] text-gray-300 leading-relaxed">{report.summary}</p>
+      </div>
+
+      {/* 优势与改进 */}
+      {report.strengths.length > 0 && (
+        <div className="bg-gray-950/60 rounded border border-emerald-900/30 p-3">
+          <h4 className="text-[11px] text-emerald-400/70 font-medium mb-1">核心优势</h4>
+          {report.strengths.map((s, i) => (
+            <p key={i} className="text-[10px] text-gray-400 leading-relaxed">• {s}</p>
+          ))}
+        </div>
+      )}
+      {report.improvements.length > 0 && (
+        <div className="bg-gray-950/60 rounded border border-orange-900/30 p-3">
+          <h4 className="text-[11px] text-orange-400/70 font-medium mb-1">改进方向</h4>
+          {report.improvements.map((s, i) => (
+            <p key={i} className="text-[10px] text-gray-400 leading-relaxed">• {s}</p>
+          ))}
+        </div>
+      )}
+
+      {/* 下一步建议 */}
+      <div className="bg-gray-950/60 rounded border border-amber-900/30 p-3">
+        <h4 className="text-[11px] text-amber-400/70 font-medium mb-1">下一步建议</h4>
+        {report.nextSteps.map((s, i) => (
+          <p key={i} className="text-[10px] text-gray-400 leading-relaxed">• {s}</p>
+        ))}
+      </div>
+    </div>
+  )
 }

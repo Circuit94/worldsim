@@ -28,7 +28,7 @@ The engine uses intelligent **keyword matching** to assign visuals based on AI-g
 | **World Evolution** | Static until player acts | **Autonomous world events** — the world evolves independently |
 | **Architecture** | Monolithic app | **Pluggable engine** — same core powers different scenario types |
 | **Transparency** | Black box | **Full prompt engineering visibility** via Dev Mode |
-| **Reproducibility** | Random each time | **Seed-based worlds** — share & compare different playthroughs |
+| **Shareability** | Random each time | **Seed hints** — theme + seed passed to LLM for loosely similar worlds (not deterministic) |
 | **Data Export** | None | **Session behavior logs** for analysis and modeling |
 
 ## 🧠 Architecture
@@ -68,7 +68,7 @@ The engine uses intelligent **keyword matching** to assign visuals based on AI-g
 1. **Structured Output Engineering** — All AI outputs are constrained to JSON schemas, ensuring deterministic parsing and zero hallucination in game state
 2. **Sliding Window Context** — Only the last 3 events are passed to the LLM, keeping token costs O(1) per action regardless of game length
 3. **Memory-Driven Agents** — Inspired by [Stanford's Generative Agents](https://arxiv.org/abs/2304.03442) (Park et al., 2023): agents observe → store → reflect → plan
-4. **Seed Reproducibility** — Same theme + seed = same world structure, enabling A/B comparisons and social sharing
+4. **Seed Hinting** — A seed string is passed to the LLM as a generation hint. Worlds with the same theme + seed tend to be *thematically similar* but are **not deterministic** due to LLM non-determinism. True procedural reproducibility is on the roadmap.
 5. **Token-Aware Design** — Every architectural decision optimizes for minimal token consumption while maximizing emergent behavior
 
 ## 🚀 Quick Start
@@ -81,7 +81,7 @@ The engine uses intelligent **keyword matching** to assign visuals based on AI-g
 ### Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/worldsim.git
+git clone https://github.com/Circuit94/worldsim.git
 cd worldsim
 npm install
 ```
@@ -193,7 +193,7 @@ This is intentionally visible — it demonstrates the engineering behind AI prod
 - [x] World generation from natural language
 - [x] Memory-driven NPC system (observe → reflect → plan → act)
 - [x] Autonomous world events
-- [x] Seed-based reproducible worlds
+- [x] Seed hinting system (thematic similarity, not deterministic — see Design Principles)
 - [x] Prompt engineering transparency layer
 
 ### v0.2 (Current) — Engine Platform ✅
@@ -204,7 +204,7 @@ This is intentionally visible — it demonstrates the engineering behind AI prod
 - [x] Batch simulation & autopilot mode
 - [x] Session analytics dashboard
 - [x] Keyboard shortcuts & save/load system
-- [x] A/B testing support (same seed, different strategies)
+- [x] Session comparison tools (export + diff across playthroughs)
 
 ### v0.3 — Commercial Ready (Planned)
 - [ ] REST API server wrapper (Express/Hono)

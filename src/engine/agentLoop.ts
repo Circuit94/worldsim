@@ -12,6 +12,7 @@
  * - Reflection triggers every 5 observations (not every turn)
  * - Agent actions are LOCAL — they can only affect their immediate vicinity
  * - Total token cost: ~200-300 tokens per agent tick (very light)
+ * - Importance-weighted memory: high-importance observations are never evicted
  */
 
 import type { WorldSchema, PlayerState, Agent, AgentTickResult, DebugLog } from './types'
@@ -36,6 +37,85 @@ function shouldReflect(agent: Agent): boolean {
 }
 
 /**
+ * Retain observations with importance-weighted eviction.
+ * 
+ * When observations exceed maxSize:
+ * 1. Core memories (importance >= 7) are NEVER evicted
+ * 2. Regular memories are ranked by recency score:
+ *    score = importance * 0.6 + recencyNorm * 0.4
+ * 3. Lowest-scoring regular memories are dropped first
+ */
+function retainWithImportance(
+  observations: Array<{ step: number; content: string; importance: number }>,
+  maxSize: number
+): Array<{ step: number; content: string; importance: number }> {
+  if (observations.length <= maxSize) return observations
+
+  const coreMemories = observations.filter(o => o.importance >= 7)
+  const regularMemories = observations.filter(o => o.importance < 7)
+
+  // If core memories alone exceed maxSize, keep all core + most recent regular
+  const regularSlots = Math.max(0, maxSize - coreMemories.length)
+
+  if (regularSlots === 0) {
+    // Extremely rare: too many core memories, keep most recent ones
+    return coreMemories.slice(-maxSize)
+  }
+
+  // Score regular memories: blend importance and recency
+  const maxStep = Math.max(...regularMemories.map(o => o.step), 1)
+  const scored = regularMemories.map(o => ({
+    ...o,
+    score: (o.importance / 10) * 0.6 + (o.step / maxStep) * 0.4,
+  }))
+
+  // Sort by score descending, keep top N
+  scored.sort((a, b) => b.score - a.score)
+  const keptRegular = scored.slice(0, regularSlots).map(({ score, ...rest }) => rest)
+
+  // Combine and sort by step for chronological order
+  const result = [...coreMemories, ...keptRegular]
+  result.sort((a, b) => a.step - b.step)
+  return result
+}
+
+/**
+ * Importance-weighted memory retrieval
+ * Returns the most relevant observations for the agent's current context.
+ * 
+ * Strategy:
+ * - Always include observations with importance >= 7 ("core memories")
+ * - Fill remaining slots with most recent observations
+ * - Cap total at maxSlots to control token budget
+ */
+function retrieveRelevantMemory(agent: Agent, maxSlots: number = 5): string {
+  const obs = agent.memory.observations
+  if (obs.length === 0) return '暂无'
+
+  // Partition: core memories (importance >= 7) vs regular
+  const coreMemories = obs.filter(o => o.importance >= 7)
+  const regularMemories = obs.filter(o => o.importance < 7)
+
+  // Core memories always included (up to half the slots)
+  const coreSlots = Math.min(coreMemories.length, Math.ceil(maxSlots / 2))
+  const regularSlots = maxSlots - coreSlots
+
+  // Take most recent core memories and most recent regular memories
+  const selected = [
+    ...coreMemories.slice(-coreSlots),
+    ...regularMemories.slice(-regularSlots),
+  ]
+
+  // Sort by step order for coherent context
+  selected.sort((a, b) => a.step - b.step)
+
+  return selected.map(o => {
+    const marker = o.importance >= 7 ? '★' : '·'
+    return `${marker} ${o.content}`
+  }).join('; ')
+}
+
+/**
  * Build compact prompt for agent autonomous tick
  * Designed to be extremely token-efficient (~150-200 input tokens)
  */
@@ -45,7 +125,7 @@ function buildAgentTickPrompt(
   player: PlayerState,
   nearbyContext: string
 ): string {
-  const recentObs = agent.memory.observations.slice(-3).map(o => o.content).join('; ')
+  const recentObs = retrieveRelevantMemory(agent, 5)
   const reflections = agent.memory.reflections.length > 0 
     ? agent.memory.reflections.slice(-2).join('; ')
     : '暂无'
@@ -199,13 +279,16 @@ export function applyAgentTick(
 
     const newMemory = { ...agent.memory }
 
-    // Add self-observation
+    // Add self-observation with importance-weighted retention
     const newObs = {
       step: currentStep ?? agent.memory.observations.length,
       content: result.action,
       importance: 3,
     }
-    newMemory.observations = [...agent.memory.observations.slice(-9), newObs]
+    newMemory.observations = retainWithImportance(
+      [...agent.memory.observations, newObs],
+      15  // max total observations to keep
+    )
 
     // Add reflection if generated
     if (result.newReflection) {

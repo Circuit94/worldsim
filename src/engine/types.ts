@@ -53,8 +53,8 @@ export interface Agent {
 }
 
 export interface AgentMemory {
-  observations: Observation[];           // Raw observations (capped at 10)
-  reflections: string[];                 // Higher-level reflections (capped at 3)
+  observations: Observation[];           // Importance-weighted retention (max ~15, core memories never evicted)
+  reflections: string[];                 // Higher-level reflections (capped at 5)
   attitude: number;                      // -100 to 100, attitude toward player
   knownFacts: string[];                  // Facts about the player
   currentPlan: string | null;            // Agent's current intention (updated via reflection)
