@@ -67,8 +67,8 @@ export default function LandingHero({ onEnter }: { onEnter: () => void }) {
       <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-2 mb-8 text-[10px]">
         <TechChip title="Stanford GenAgents" detail="观察→记忆→反思→规划→行动" />
         <TechChip title="规则引擎兜底" detail="7 道硬约束，LLM 输出不失控" />
-        <TechChip title="~200 tokens/回合" detail="成本仅全量 context 的 1/20" />
-        <TechChip title="Seed 可复现" detail="相同种子 = 相同世界，支持对照实验" />
+        <TechChip title="~200 Token/回合" detail="成本仅全量上下文的 1/20" />
+        <TechChip title="种子可复现" detail="相同种子 = 相同世界，支持对照实验" />
       </div>
 
       {/* ===== 市场验证 — 一行紧凑 ===== */}
@@ -77,7 +77,7 @@ export default function LandingHero({ onEnter }: { onEnter: () => void }) {
         <MarketTag name="Artificial Societies" info="YC W25 · $5.35M" />
         <MarketTag name="AgentHub" info="YC S25" />
         <MarketTag name="Tavus/Synthesia" info="$78M+" />
-        <MarketTag name="AI Dungeon" info="$200M+ rev" />
+        <MarketTag name="AI Dungeon" info="$200M+ 营收" />
       </div>
 
       {/* ===== CTA ===== */}
@@ -93,13 +93,13 @@ export default function LandingHero({ onEnter }: { onEnter: () => void }) {
           立即体验 →
         </button>
         <p className="text-[10px] text-gray-600">
-          DeepSeek / Gemini · 无需注册 · Key 仅存浏览器本地
+          DeepSeek / Gemini · 无需注册 · 密钥仅存浏览器本地
         </p>
       </div>
 
       {/* ===== Footer 极简 ===== */}
       <div className="mt-6 text-[9px] text-gray-700 text-center">
-        TypeScript · React 19 · Vite 6 · MIT · Solo-built · ref: Park et al. "Generative Agents" (UIST 2023)
+        TypeScript · React 19 · Vite 6 · MIT · 独立开发 · 参考: Park et al. "Generative Agents" (UIST 2023)
       </div>
     </div>
   )

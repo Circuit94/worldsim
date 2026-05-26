@@ -25,11 +25,11 @@ export type GeminiModel =
   | 'gemini-1.5-flash'
 
 export const MODEL_OPTIONS: { id: GeminiModel; label: string; description: string; provider: LLMProvider }[] = [
-  { id: 'deepseek-chat', label: 'DeepSeek V3', description: 'Best value: ¥1/M input, ¥2/M output', provider: 'deepseek' },
-  { id: 'deepseek-reasoner', label: 'DeepSeek R1', description: 'Deep reasoning, higher cost', provider: 'deepseek' },
-  { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', description: 'Free tier, 15 RPM', provider: 'gemini' },
-  { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', description: 'Free tier, 30 RPM', provider: 'gemini' },
-  { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', description: 'Free tier fallback', provider: 'gemini' },
+  { id: 'deepseek-chat', label: 'DeepSeek V3', description: '性价比最优：￥1/M 输入，￥2/M 输出', provider: 'deepseek' },
+  { id: 'deepseek-reasoner', label: 'DeepSeek R1', description: '深度推理，成本较高', provider: 'deepseek' },
+  { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', description: '免费额度，15 次/分钟', provider: 'gemini' },
+  { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', description: '免费额度，30 次/分钟', provider: 'gemini' },
+  { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', description: '免费额度备选', provider: 'gemini' },
 ]
 
 // ============================================================
@@ -86,7 +86,7 @@ async function callDeepSeek(
       messages: [
         {
           role: 'system',
-          content: 'You are a world simulation engine. Always output valid JSON only. No markdown, no explanation, just the JSON object as specified in the user prompt.',
+          content: '你是一个世界模拟引擎。始终只输出有效的 JSON。不要输出 markdown，不要解释，只输出用户提示中指定的 JSON 对象。所有文本内容必须为中文。',
         },
         {
           role: 'user',
@@ -103,7 +103,7 @@ async function callDeepSeek(
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
     const errorMsg = errorData.error?.message || `HTTP ${response.status}`
-    throw new Error(`DeepSeek API error: ${errorMsg}`)
+    throw new Error(`DeepSeek API 错误: ${errorMsg}`)
   }
 
   const result = await response.json()
@@ -162,7 +162,7 @@ export async function callGemini(
   prompt: string,
   type: 'world_gen' | 'action' | 'agent_tick'
 ): Promise<{ data: any; debug: DebugLog }> {
-  if (!apiKey) throw new Error('API key not set. Please enter your API key.')
+  if (!apiKey) throw new Error('API 密钥未设置，请先输入你的 API Key。')
 
   const provider = getProvider()
   const maxRetries = 2
@@ -189,7 +189,7 @@ export async function callGemini(
         if (jsonMatch) {
           data = JSON.parse(jsonMatch[1])
         } else {
-          throw new Error(`Failed to parse JSON response: ${text.slice(0, 200)}`)
+          throw new Error(`JSON 响应解析失败: ${text.slice(0, 200)}`)
         }
       }
 
@@ -223,7 +223,7 @@ export async function callGemini(
         promptTokens: Math.ceil(prompt.length / 4),
         responseTokens: 0,
         prompt,
-        response: `ERROR: ${error.message}`,
+        response: `错误: ${error.message}`,
         latencyMs,
       }
       throw Object.assign(error, { debug })

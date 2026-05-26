@@ -1,17 +1,16 @@
 /**
- * WorldSim — Analytics Dashboard
+ * WorldSim — 会话分析面板
  * 
- * Visualizes session data to demonstrate commercial value:
- * - Behavior heatmap (where player spent time)
- * - NPC attitude timeline (relationship dynamics)
- * - Decision pattern analysis
- * - Token efficiency metrics
- * 
- * This is the "why enterprises would pay" component.
+ * 可视化会话数据，展示商业价值：
+ * - 行为热力图（玩家在哪里停留最多）
+ * - NPC 态度变化（关系动态）
+ * - 决策模式分析
+ * - Token 效率指标
  */
 
 import { useMemo } from 'react'
 import { useGameStore } from '../store/gameStore'
+import { getAgentVisual } from '../engine/tileVisuals'
 
 export default function AnalyticsPanel() {
   const { world, player, narrativeLog, debugLogs, totalTokensUsed } = useGameStore()
@@ -34,7 +33,7 @@ export default function AnalyticsPanel() {
     const attitudeTimeline = world.agents.map(agent => ({
       id: agent.id,
       name: agent.name,
-      emoji: agent.emoji,
+      agentId: agent.id,
       attitude: agent.memory.attitude,
       observations: agent.memory.observations.length,
       reflections: agent.memory.reflections.length,
@@ -74,24 +73,24 @@ export default function AnalyticsPanel() {
   return (
     <div className="space-y-4 p-4 bg-gray-950 rounded-lg border border-gray-800">
       <h3 className="text-sm font-medium text-gray-300 flex items-center gap-2">
-        📊 Session Analytics
-        <span className="text-[10px] text-gray-600 font-normal">Real-time behavior data</span>
+        ◆ 会话分析
+        <span className="text-[10px] text-gray-600 font-normal">实时行为数据</span>
       </h3>
 
-      {/* Key Metrics */}
+      {/* 核心指标 */}
       <div className="grid grid-cols-4 gap-2">
-        <MetricCard label="Actions" value={analytics.totalActions} />
-        <MetricCard label="Avg Latency" value={`${analytics.avgLatency}ms`} />
-        <MetricCard label="Tokens/Action" value={analytics.avgTokensPerAction} />
-        <MetricCard label="Rules Fired" value={`${analytics.rulesTriggered}/${analytics.totalRules}`} />
+        <MetricCard label="行动次数" value={analytics.totalActions} />
+        <MetricCard label="平均延迟" value={`${analytics.avgLatency}ms`} />
+        <MetricCard label="Token/次" value={analytics.avgTokensPerAction} />
+        <MetricCard label="规则触发" value={`${analytics.rulesTriggered}/${analytics.totalRules}`} />
       </div>
 
-      {/* Agent Relationship Map */}
+      {/* 角色关系图 */}
       <div className="space-y-2">
-        <p className="text-[10px] text-gray-600 uppercase tracking-wider">Agent Relationships</p>
+        <p className="text-[10px] text-gray-600 uppercase tracking-wider">角色关系</p>
         {analytics.attitudeTimeline.map(agent => (
           <div key={agent.id} className="flex items-center gap-2 text-xs">
-            <span className="w-5">{agent.emoji}</span>
+            <AgentDot name={agent.name} agentId={agent.agentId} />
             <span className="w-20 truncate text-gray-400">{agent.name}</span>
             <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden relative">
               <div
@@ -114,34 +113,34 @@ export default function AnalyticsPanel() {
         ))}
       </div>
 
-      {/* Decision Pattern */}
+      {/* 决策模式 */}
       <div className="space-y-2">
-        <p className="text-[10px] text-gray-600 uppercase tracking-wider">Decision Patterns</p>
+        <p className="text-[10px] text-gray-600 uppercase tracking-wider">决策模式</p>
         <div className="flex gap-1 flex-wrap">
           {Object.entries(analytics.decisionTypes).map(([type, count]) => (
             <span
               key={type}
               className="text-[10px] px-2 py-0.5 rounded-full border border-gray-700 text-gray-400"
             >
-              {getDecisionIcon(type)} {type}: {count as number}
+              {getDecisionIcon(type)} {getDecisionLabel(type)}: {count as number}
             </span>
           ))}
         </div>
       </div>
 
-      {/* API Call Breakdown */}
+      {/* API 调用效率 */}
       <div className="space-y-1">
-        <p className="text-[10px] text-gray-600 uppercase tracking-wider">API Efficiency</p>
+        <p className="text-[10px] text-gray-600 uppercase tracking-wider">API 效率</p>
         <div className="flex gap-3 text-[10px] text-gray-500">
-          <span>🎯 Player actions: {analytics.actionCalls}</span>
-          <span>🤖 Agent ticks: {analytics.agentCalls}</span>
-          <span>⚡ Total tokens: {totalTokensUsed.toLocaleString()}</span>
+          <span>▸ 玩家行动: {analytics.actionCalls}</span>
+          <span>▸ 智能体自主: {analytics.agentCalls}</span>
+          <span>▸ 总 Token: {totalTokensUsed.toLocaleString()}</span>
         </div>
       </div>
 
-      {/* Mini Heatmap */}
+      {/* 热力图 */}
       <div className="space-y-1">
-        <p className="text-[10px] text-gray-600 uppercase tracking-wider">Position Heatmap</p>
+        <p className="text-[10px] text-gray-600 uppercase tracking-wider">位置热力图</p>
         <div className="grid grid-cols-7 gap-px">
           {analytics.heatmap.flat().map((val, i) => (
             <div
@@ -164,7 +163,7 @@ function MetricCard({ label, value }: { label: string; value: string | number })
   return (
     <div className="text-center p-2 bg-gray-900 rounded-lg border border-gray-800">
       <div className="text-sm font-mono text-purple-300">{value}</div>
-      <div className="text-[9px] text-gray-600 uppercase">{label}</div>
+      <div className="text-[9px] text-gray-600">{label}</div>
     </div>
   )
 }
@@ -176,17 +175,18 @@ function categorizeDecisions(actions: string[]): Record<string, number> {
     const lower = action.toLowerCase()
     let type = 'other'
     
-    if (lower.includes('talk') || lower.includes('ask') || lower.includes('say') || lower.includes('speak')) {
+    // 中英文关键词匹配
+    if (lower.includes('talk') || lower.includes('ask') || lower.includes('say') || lower.includes('speak') || lower.includes('交谈') || lower.includes('问') || lower.includes('说') || lower.includes('对话')) {
       type = 'social'
-    } else if (lower.includes('look') || lower.includes('examine') || lower.includes('search') || lower.includes('inspect')) {
+    } else if (lower.includes('look') || lower.includes('examine') || lower.includes('search') || lower.includes('inspect') || lower.includes('查看') || lower.includes('观察') || lower.includes('搜索') || lower.includes('检查')) {
       type = 'explore'
-    } else if (lower.includes('move') || lower.includes('go') || lower.includes('walk') || lower.includes('enter')) {
+    } else if (lower.includes('move') || lower.includes('go') || lower.includes('walk') || lower.includes('enter') || lower.includes('前往') || lower.includes('走') || lower.includes('进入') || lower.includes('移动')) {
       type = 'navigate'
-    } else if (lower.includes('attack') || lower.includes('fight') || lower.includes('hit') || lower.includes('defend')) {
+    } else if (lower.includes('attack') || lower.includes('fight') || lower.includes('hit') || lower.includes('defend') || lower.includes('攻击') || lower.includes('打') || lower.includes('战斗') || lower.includes('防御')) {
       type = 'combat'
-    } else if (lower.includes('take') || lower.includes('grab') || lower.includes('pick') || lower.includes('use')) {
+    } else if (lower.includes('take') || lower.includes('grab') || lower.includes('pick') || lower.includes('use') || lower.includes('拿') || lower.includes('捡') || lower.includes('使用') || lower.includes('拾取')) {
       type = 'interact'
-    } else if (lower.includes('wait') || lower.includes('rest') || lower.includes('hide')) {
+    } else if (lower.includes('wait') || lower.includes('rest') || lower.includes('hide') || lower.includes('等待') || lower.includes('休息') || lower.includes('躲藏')) {
       type = 'passive'
     }
 
@@ -196,15 +196,40 @@ function categorizeDecisions(actions: string[]): Record<string, number> {
   return categories
 }
 
+function AgentDot({ name, agentId }: { name: string; agentId: string }) {
+  const visual = getAgentVisual(name, agentId)
+  return (
+    <img
+      src={visual.avatarUrl}
+      alt={visual.initial}
+      className="w-5 h-5 rounded-full border object-cover shrink-0"
+      style={{ borderColor: visual.accentColor, imageRendering: 'pixelated' }}
+    />
+  )
+}
+
 function getDecisionIcon(type: string): string {
   const icons: Record<string, string> = {
-    social: '💬',
-    explore: '🔍',
-    navigate: '🚶',
-    combat: '⚔️',
-    interact: '🤚',
-    passive: '⏸️',
-    other: '❓',
+    social: '◇',
+    explore: '○',
+    navigate: '→',
+    combat: '×',
+    interact: '□',
+    passive: '·',
+    other: '?',
   }
-  return icons[type] || '❓'
+  return icons[type] || '?'
+}
+
+function getDecisionLabel(type: string): string {
+  const labels: Record<string, string> = {
+    social: '社交',
+    explore: '探索',
+    navigate: '移动',
+    combat: '战斗',
+    interact: '交互',
+    passive: '等待',
+    other: '其他',
+  }
+  return labels[type] || '其他'
 }

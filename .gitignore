@@ -4,3 +4,5 @@ dist
 .env.local
 *.local
 .DS_Store
+visual_drafts/
+tile-preview.html

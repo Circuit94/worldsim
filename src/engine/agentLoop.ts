@@ -48,38 +48,39 @@ function buildAgentTickPrompt(
   const recentObs = agent.memory.observations.slice(-3).map(o => o.content).join('; ')
   const reflections = agent.memory.reflections.length > 0 
     ? agent.memory.reflections.slice(-2).join('; ')
-    : 'None yet'
+    : '暂无'
   
   const triggerReflection = shouldReflect(agent)
   const currentTile = world.map[agent.position[1]]?.[agent.position[0]]
-  const tileName = world.tiles[currentTile]?.name || 'Unknown'
+  const tileName = world.tiles[currentTile]?.name || '未知'
 
-  return `You are ${agent.name}: ${agent.persona.slice(0, 80)}
-Style: ${agent.decisionStyle} | Goals: ${agent.goals.slice(0, 2).join(', ')}
-Location: ${tileName} [${agent.position}]
-Recent memories: ${recentObs || 'Nothing notable'}
-Reflections: ${reflections}
-Current plan: ${agent.memory.currentPlan || 'None'}
-Player is at: [${player.position}], attitude toward player: ${agent.memory.attitude}/100
-Nearby: ${nearbyContext || 'nobody'}
+  return `你是 ${agent.name}：${agent.persona.slice(0, 80)}
+风格: ${agent.decisionStyle} | 目标: ${agent.goals.slice(0, 2).join(', ')}
+位置: ${tileName} [${agent.position}]
+近期记忆: ${recentObs || '暂无'}
+反思: ${reflections}
+当前计划: ${agent.memory.currentPlan || '无'}
+玩家位置: [${player.position}]，对玩家态度: ${agent.memory.attitude}/100
+附近: ${nearbyContext || '无人'}
 
-${triggerReflection ? 'REFLECT: Form one higher-level insight from your recent observations.\n' : ''}Decide your next autonomous action. You act INDEPENDENTLY of the player.
+${triggerReflection ? '反思任务：根据近期观察形成一条更高层级的洞察。\n' : ''}决定你的下一个自主行动。你独立于玩家行动。
 
-Output JSON:
+输出 JSON（所有文本必须是中文）:
 {
-  "action": "brief description of what you do",
-  "narrative": "one atmospheric sentence (max 60 chars)",
+  "action": "简述你做了什么（中文）",
+  "narrative": "一句氛围感叙述（中文，最多30字）",
   "newPosition": [x,y] or null,
-  "newReflection": ${triggerReflection ? '"your insight about the world/player"' : 'null'},
-  "newPlan": "your updated intention" or null,
+  "newReflection": ${triggerReflection ? '"你的洞察（中文）"' : 'null'},
+  "newPlan": "你的新计划（中文）" or null,
   "interactsWithAgent": "agent_id" or null
 }
 
-RULES:
-- You can only move 1 tile (Manhattan distance) from current position
-- Stay in bounds [0-${world.dimensions[0] - 1}]
-- Be true to your personality and goals
-- If nothing interesting, just "wait" or "observe surroundings"`
+规则:
+- 只能移动 1 格（曼哈顿距离）
+- 保持在边界内 [0-${world.dimensions[0] - 1}]
+- 忠于你的性格和目标
+- 如果没有有趣的事，就“等待”或“观察周围”
+- 所有文本输出必须是中文`
 }
 
 /**
@@ -96,7 +97,7 @@ function getAgentNearbyContext(
   const distToPlayer = Math.abs(agent.position[0] - player.position[0]) + 
                        Math.abs(agent.position[1] - player.position[1])
   if (distToPlayer <= 2) {
-    parts.push(`Player (dist ${distToPlayer})`)
+    parts.push(`玩家（距离 ${distToPlayer}）`)
   }
 
   // Check for other nearby agents
@@ -105,7 +106,7 @@ function getAgentNearbyContext(
     const dist = Math.abs(agent.position[0] - other.position[0]) + 
                  Math.abs(agent.position[1] - other.position[1])
     if (dist <= 2) {
-      parts.push(`${other.name} (dist ${dist})`)
+      parts.push(`${other.name}（距离 ${dist}）`)
     }
   }
 
@@ -115,7 +116,7 @@ function getAgentNearbyContext(
     const dist = Math.abs(agent.position[0] - item.position[0]) + 
                  Math.abs(agent.position[1] - item.position[1])
     if (dist <= 1) {
-      parts.push(`${item.emoji} ${item.name}`)
+      parts.push(`[物品:${item.name}]`)
     }
   }
 
@@ -142,8 +143,8 @@ export async function executeAgentTick(
 
     const result: AgentTickResult = {
       agentId: agent.id,
-      action: data.action || 'waits quietly',
-      narrative: data.narrative || `${agent.name} does nothing.`,
+      action: data.action || '静静等待',
+      narrative: data.narrative || `${agent.name}没有动作。`,
       newPosition: validateAgentMove(agent, data.newPosition, world),
       newReflection: data.newReflection || null,
       newPlan: data.newPlan || null,
@@ -190,7 +191,8 @@ function validateAgentMove(
  */
 export function applyAgentTick(
   world: WorldSchema,
-  result: AgentTickResult
+  result: AgentTickResult,
+  currentStep?: number
 ): WorldSchema {
   const newAgents = world.agents.map(agent => {
     if (agent.id !== result.agentId) return agent
@@ -199,8 +201,8 @@ export function applyAgentTick(
 
     // Add self-observation
     const newObs = {
-      step: -1, // Will be set by caller
-      content: `I ${result.action}`,
+      step: currentStep ?? agent.memory.observations.length,
+      content: result.action,
       importance: 3,
     }
     newMemory.observations = [...agent.memory.observations.slice(-9), newObs]

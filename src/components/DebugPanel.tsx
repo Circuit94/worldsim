@@ -13,7 +13,7 @@ export default function DebugPanel() {
                    bg-gray-900 border border-gray-700 text-gray-500
                    hover:border-purple-500 hover:text-purple-400 transition-all z-50"
       >
-        🔬 Dev Mode
+        ◇ 开发模式
       </button>
     )
   }
@@ -36,9 +36,9 @@ export default function DebugPanel() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800 bg-gray-900/50">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-mono text-purple-400">🔬 Prompt Engineering Transparency Layer</span>
+          <span className="text-xs font-mono text-purple-400">◇ 提示工程透明层</span>
           <span className="text-[10px] text-gray-600 font-mono">
-            {totalTokensUsed.toLocaleString()} tokens total
+            共 {totalTokensUsed.toLocaleString()} tokens
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -47,7 +47,7 @@ export default function DebugPanel() {
             className="text-[10px] px-2 py-1 rounded bg-gray-800 border border-gray-700
                        hover:border-cyan-600 text-gray-400 hover:text-cyan-300 transition-all"
           >
-            📦 Export Session
+            ⇩ 导出会话
           </button>
           <button
             onClick={toggleDebug}
@@ -71,10 +71,10 @@ export default function DebugPanel() {
                 <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase ${
                   log.type === 'world_gen' ? 'bg-purple-900 text-purple-300' : 'bg-cyan-900 text-cyan-300'
                 }`}>
-                  {log.type === 'world_gen' ? 'GEN' : 'ACT'}
+                  {log.type === 'world_gen' ? '生成' : '行动'}
                 </span>
                 <span className="text-gray-400 font-mono">
-                  {log.promptTokens}→{log.responseTokens} tok
+                  {log.promptTokens}→{log.responseTokens} Token
                 </span>
                 <span className="text-gray-600 font-mono">
                   {log.latencyMs}ms
@@ -86,13 +86,13 @@ export default function DebugPanel() {
             {expandedLog === i && (
               <div className="border-t border-gray-800 p-3 space-y-3">
                 <div>
-                  <p className="text-[9px] text-gray-600 uppercase mb-1">Prompt (input)</p>
+                  <p className="text-[9px] text-gray-600 uppercase mb-1">提示词 (输入)</p>
                   <pre className="text-[10px] text-gray-400 bg-gray-900 p-2 rounded overflow-x-auto max-h-40 overflow-y-auto whitespace-pre-wrap">
                     {log.prompt}
                   </pre>
                 </div>
                 <div>
-                  <p className="text-[9px] text-gray-600 uppercase mb-1">Response (output)</p>
+                  <p className="text-[9px] text-gray-600 uppercase mb-1">响应 (输出)</p>
                   <pre className="text-[10px] text-green-400/70 bg-gray-900 p-2 rounded overflow-x-auto max-h-40 overflow-y-auto whitespace-pre-wrap">
                     {log.response}
                   </pre>
@@ -104,7 +104,7 @@ export default function DebugPanel() {
 
         {debugLogs.length === 0 && (
           <p className="text-xs text-gray-700 text-center py-8">
-            No API calls yet. Generate a world to see prompt engineering in action.
+            暂无 API 调用记录。生成一个世界后即可查看提示工程细节。
           </p>
         )}
       </div>

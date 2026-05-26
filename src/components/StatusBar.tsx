@@ -1,4 +1,5 @@
 import { useGameStore } from '../store/gameStore'
+import { getAgentVisual } from '../engine/tileVisuals'
 
 export default function StatusBar() {
   const { player, world, totalTokensUsed } = useGameStore()
@@ -38,25 +39,29 @@ export default function StatusBar() {
       {/* Token 用量 */}
       <div className="flex items-center gap-1 ml-auto">
         <span className="text-gray-700 text-[10px]">消耗</span>
-        <span className="text-gray-700 font-mono">{totalTokensUsed.toLocaleString()} tokens</span>
+        <span className="text-gray-700 font-mono">{totalTokensUsed.toLocaleString()} Token</span>
       </div>
 
       {/* NPC 态度一览 */}
       {world && world.agents.length > 0 && (
         <div className="flex items-center gap-2">
-          {world.agents.map(a => (
-            <span
-              key={a.id}
-              title={`${a.name}（态度: ${a.memory.attitude > 0 ? '+' : ''}${a.memory.attitude}）${a.memory.currentPlan ? '\n当前计划: ' + a.memory.currentPlan : ''}${a.memory.reflections.length > 0 ? '\n反思: ' + a.memory.reflections[a.memory.reflections.length - 1] : ''}`}
-              className={`text-sm cursor-help ${
-                a.memory.attitude > 20 ? 'opacity-100' :
-                a.memory.attitude < -20 ? 'opacity-100 grayscale' :
-                'opacity-50'
-              }`}
-            >
-              {a.emoji}
-            </span>
-          ))}
+          {world.agents.map(a => {
+            const visual = getAgentVisual(a.name, a.id)
+            return (
+              <img
+                key={a.id}
+                src={visual.avatarUrl}
+                alt={visual.initial}
+                title={`${a.name}（态度: ${a.memory.attitude > 0 ? '+' : ''}${a.memory.attitude}）${a.memory.currentPlan ? '\n当前计划: ' + a.memory.currentPlan : ''}${a.memory.reflections.length > 0 ? '\n反思: ' + a.memory.reflections[a.memory.reflections.length - 1] : ''}`}
+                className="w-5 h-5 rounded-full border object-cover cursor-help"
+                style={{
+                  borderColor: visual.accentColor,
+                  opacity: Math.abs(a.memory.attitude) > 20 ? 1 : 0.5,
+                  imageRendering: 'pixelated',
+                }}
+              />
+            )
+          })}
         </div>
       )}
     </div>

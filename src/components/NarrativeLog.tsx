@@ -11,8 +11,11 @@ export default function NarrativeLog() {
 
   return (
     <div className="space-y-1">
-      <h3 className="text-xs text-gray-500 uppercase tracking-wider">事件日志</h3>
-      <div className="h-48 overflow-y-auto space-y-1 p-3 bg-gray-900/30 rounded-lg border border-gray-800 text-sm">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs text-gray-500 uppercase tracking-wider">事件日志</h3>
+        <span className="text-[9px] text-gray-700 font-mono">{narrativeLog.length} 条</span>
+      </div>
+      <div className="max-h-[320px] min-h-[120px] overflow-y-auto space-y-1.5 p-3 bg-gray-900/30 rounded-lg border border-gray-800 text-sm">
         {narrativeLog.length === 0 && (
           <p className="text-gray-600 text-xs italic">世界尚未开始演化...</p>
         )}
@@ -23,10 +26,13 @@ export default function NarrativeLog() {
               entry.type === 'system'
                 ? 'text-gray-500 text-xs font-mono'
                 : entry.type === 'event'
-                  ? 'text-amber-400 text-xs italic'
-                  : 'text-gray-300'
+                  ? 'text-amber-400/80 text-xs'
+                  : 'text-gray-200'
             }`}
           >
+            {entry.type === 'narrative' && !entry.text.startsWith('→') && (
+              <span className="text-purple-400/60 mr-1">▸</span>
+            )}
             {entry.text}
           </div>
         ))}

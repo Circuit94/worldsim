@@ -15,6 +15,57 @@ import { initGemini, type GeminiModel } from '../api/gemini'
 import { type ScenarioMode, getScenarioConfig } from '../engine/scenarios'
 import { autoSave } from '../engine/persistence'
 
+/**
+ * 根据模式生成初始选项
+ */
+function getInitialChoices(mode: ScenarioMode): string[] {
+  switch (mode) {
+    case 'training':
+      return [
+        '[信息梳理] 逐一确认各利益相关方的核心诉求、底线和当前情绪状态，建立博弈全景图',
+        '[主动破局] 直接向决策权最大的一方提出你的方案框架，争取主导议程设置',
+        '[试探施压] 以有限让步测试对方底线弹性，同时通过提问暴露对方信息盲区',
+      ]
+    case 'simulation':
+      return [] // 仿真模式自动推进，不需要选项
+    case 'game':
+    default:
+      return ['检查周围有什么值得注意的东西', '走过去和最近的人搭话', '朝最近的建筑物走去']
+  }
+}
+
+/**
+ * 根据模式生成不同风格的初始日志
+ */
+function getInitialNarrativeLog(
+  mode: ScenarioMode,
+  world: { name: string; description: string; winCondition: string; agents: any[] }
+): { text: string; type: 'narrative' | 'event' | 'system' }[] {
+  switch (mode) {
+    case 'training':
+      return [
+        { text: `情景评估启动 — ${world.name}`, type: 'system' },
+        { text: world.description, type: 'narrative' },
+        { text: `评估目标：${world.winCondition}`, type: 'system' },
+        { text: `参与角色：${world.agents.map(a => a.name).join('、')}`, type: 'system' },
+      ]
+    case 'simulation':
+      return [
+        { text: `仿真实验初始化 — ${world.name}`, type: 'system' },
+        { text: world.description, type: 'narrative' },
+        { text: `观测目标：${world.winCondition}`, type: 'system' },
+        { text: `智能体数量：${world.agents.length} · 最大轮次：20 · 状态：就绪`, type: 'system' },
+      ]
+    case 'game':
+    default:
+      return [
+        { text: `◈ ${world.name}`, type: 'system' },
+        { text: world.description, type: 'narrative' },
+        { text: `◎ 目标: ${world.winCondition}`, type: 'system' },
+      ]
+  }
+}
+
 export type GamePhase = 'setup' | 'generating' | 'playing' | 'gameover'
 
 interface GameState {
@@ -84,16 +135,15 @@ export const useGameStore = create<GameState>((set, get) => ({
         steps: 0,
       }
 
+      // 根据模式生成不同风格的初始日志
+      const initialLog = getInitialNarrativeLog(mode, world)
+
       set({
         phase: 'playing',
         world,
         player,
-        narrativeLog: [
-          { text: `🌍 ${world.name}`, type: 'system' },
-          { text: world.description, type: 'narrative' },
-          { text: `🎯 Goal: ${world.winCondition}`, type: 'system' },
-        ],
-        choices: ['Look around', 'Talk to nearby person', 'Explore cautiously'],
+        narrativeLog: initialLog,
+        choices: getInitialChoices(mode),
         debugLogs: [debug],
         totalTokensUsed: debug.promptTokens + debug.responseTokens,
         isProcessing: false,
@@ -101,7 +151,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     } catch (error: any) {
       set({
         phase: 'setup',
-        error: error.message || 'Failed to generate world',
+        error: error.message || '世界生成失败',
         isProcessing: false,
         debugLogs: error.debug ? [error.debug] : get().debugLogs,
       })
@@ -109,8 +159,13 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   performAction: async (action: string) => {
-    const { world, player, narrativeLog, debugLogs, totalTokensUsed } = get()
+    const { world, player, narrativeLog, debugLogs, totalTokensUsed, scenarioMode } = get()
     if (!world || !player) return
+
+    // 仿真模式下自动推进时，替换为有意义的 prompt
+    const resolvedAction = action === '__AUTO_TICK__' 
+      ? '推进下一轮：所有智能体自主行动，报告本轮发生了什么'
+      : action
 
     set({ isProcessing: true, error: null })
 
@@ -120,10 +175,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       .map(l => l.text)
 
     try {
-      const { response, debug, corrections, firedRules } = await processAction(world, player, action, recentEvents)
+      const { response, debug, corrections, firedRules } = await processAction(world, player, resolvedAction, recentEvents, scenarioMode)
 
       // Apply effects to get new state
-      let { world: newWorld, player: newPlayer } = applyEffects(world, player, response)
+      let { world: newWorld, player: newPlayer } = applyEffects(world, player, response, scenarioMode)
 
       // Mark fired rules in world state
       if (firedRules.length > 0) {
@@ -133,36 +188,38 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       // Build new narrative log entries
       const newLogs: { text: string; type: 'narrative' | 'event' | 'system' }[] = [
-        { text: `> ${action}`, type: 'system' },
+        { text: action === '__AUTO_TICK__' ? `▸ 第 ${player.steps + 1} 轮推演` : `→ ${action}`, type: 'system' },
         { text: response.narrative, type: 'narrative' },
       ]
 
       // Add rule engine corrections to debug (visible in dev mode)
       if (corrections.length > 0) {
-        newLogs.push({ text: `🔧 [Engine] ${corrections.join('; ')}`, type: 'system' })
+        newLogs.push({ text: `[fix] ${corrections.join('；')}`, type: 'system' })
       }
 
       // Add fired rules to narrative
       for (const effect of firedRules) {
-        newLogs.push({ text: `⚙️ ${effect}`, type: 'event' })
+        newLogs.push({ text: `◦ ${effect}`, type: 'event' })
       }
 
       // Add agent reactions to log
       for (const reaction of response.effects.agentReactions) {
         const agent = newWorld.agents.find(a => a.id === reaction.agentId)
         if (agent) {
-          newLogs.push({ text: `${agent.emoji} ${agent.name}: ${reaction.reaction}`, type: 'narrative' })
+          newLogs.push({ text: `[${agent.name}] ${reaction.reaction}`, type: 'narrative' })
         }
       }
 
       // Add world event to log
       if (response.worldEvent) {
-        newLogs.push({ text: `⚡ ${response.worldEvent.description}`, type: 'event' })
+        newLogs.push({ text: `◈ ${response.worldEvent.description}`, type: 'event' })
       }
 
-      // Check game over
+      // Check end condition
       if (response.gameOver) {
-        newLogs.push({ text: `🏁 ${response.gameOverReason || 'Game Over'}`, type: 'system' })
+        const endLabel = scenarioMode === 'training' ? '评估完成' : 
+                         scenarioMode === 'simulation' ? '推演结束' : '游戏结束'
+        newLogs.push({ text: `${response.gameOverReason || endLabel}`, type: 'system' })
       }
 
       // --- Agent Autonomous Tick (after player action) ---
@@ -176,9 +233,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         try {
           const tickResult = await executeAgentTick(newWorld, newPlayer, newPlayer.steps)
           if (tickResult) {
-            finalWorld = applyAgentTick(newWorld, tickResult.result)
+            finalWorld = applyAgentTick(newWorld, tickResult.result, newPlayer.steps)
             agentLogs.push({
-              text: `${finalWorld.agents.find(a => a.id === tickResult.result.agentId)?.emoji || '🤖'} ${tickResult.result.narrative}`,
+              text: `[${finalWorld.agents.find(a => a.id === tickResult.result.agentId)?.name || '智能体'}] ${tickResult.result.narrative}`,
               type: 'narrative',
             })
             agentDebug = [tickResult.debug]
@@ -210,7 +267,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       }
     } catch (error: any) {
       set({
-        error: error.message || 'Failed to process action',
+        error: error.message || '行动处理失败',
         isProcessing: false,
         debugLogs: error.debug ? [...debugLogs, error.debug] : debugLogs,
       })
@@ -226,7 +283,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     return {
       worldSchema: world,
       playerDecisions: narrativeLog
-        .filter(l => l.text.startsWith('> '))
+        .filter(l => l.text.startsWith('→ '))
         .map((l, i) => ({ step: i, action: l.text.slice(2), result: narrativeLog[narrativeLog.indexOf(l) + 1]?.text || '' })),
       agentBehaviorLog: world.agents.flatMap(a =>
         a.memory.observations.map(obs => ({ step: obs.step, agentId: a.id, behavior: obs.content }))

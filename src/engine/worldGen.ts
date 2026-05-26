@@ -46,13 +46,12 @@ export async function generateWorld(
     seed,
     theme,
     description: data.description,
-    dimensions: [7, 7],
+    dimensions: data.dimensions || [data.map?.[0]?.length || 5, data.map?.length || 5],
     map: data.map,
     tiles: data.tiles,
     agents: (data.agents || []).map((a: any): Agent => ({
       id: a.id,
       name: a.name,
-      emoji: a.emoji || '👤',
       position: a.position,
       persona: a.persona,
       goals: a.goals || [],
@@ -67,7 +66,7 @@ export async function generateWorld(
       ...rule,
       fired: false,
     })),
-    winCondition: data.winCondition || 'Explore and survive',
+    winCondition: data.winCondition || '探索并生存',
     mode: 'game',
   }
 
@@ -75,5 +74,5 @@ export async function generateWorld(
 }
 
 export function getPlayerStart(data: any): [number, number] {
-  return data.playerStart || [3, 3]
+  return data.playerStart || [2, 2]
 }

@@ -31,7 +31,7 @@ export interface WorldSchema {
 }
 
 export interface TileDef {
-  emoji: string;
+  emoji?: string;  // deprecated — visual system auto-generates from name/description
   name: string;
   walkable: boolean;
   description?: string;
@@ -44,7 +44,7 @@ export interface TileDef {
 export interface Agent {
   id: string;
   name: string;
-  emoji: string;
+  emoji?: string;  // deprecated — visual system auto-generates from agent name/id
   position: [number, number];
   persona: string;                       // Personality & background description
   goals: string[];                       // What this agent wants to achieve
@@ -73,7 +73,7 @@ export interface Observation {
 export interface Item {
   id: string;
   name: string;
-  emoji: string;
+  emoji?: string;  // deprecated — visual system auto-generates from item name
   position: [number, number];
   description: string;
   collected: boolean;

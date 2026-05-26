@@ -12,6 +12,7 @@ import type { WorldSchema, PlayerState, ActionResponse, Agent, DebugLog, Observa
 import { buildActionPrompt } from './prompts'
 import { callGemini } from '../api/gemini'
 import { validateAndCorrect, checkRuleTriggers, markRulesFired } from './ruleEngine'
+import { type ScenarioMode, getScenarioConfig } from './scenarios'
 
 /**
  * Get agents within Manhattan distance 2 of a position
@@ -29,31 +30,35 @@ function getNearbyAgents(agents: Agent[], position: [number, number], range = 2)
 export function applyEffects(
   world: WorldSchema,
   player: PlayerState,
-  response: ActionResponse
+  response: ActionResponse,
+  mode: ScenarioMode = 'game'
 ): { world: WorldSchema; player: PlayerState } {
   let newPlayer = { ...player }
   let newWorld = { ...world, agents: [...world.agents], items: [...world.items], rules: [...world.rules] }
 
   const fx = response.effects
+  const isGameMode = mode === 'game'
 
-  // HP change
-  newPlayer.hp = Math.max(0, Math.min(newPlayer.maxHp, newPlayer.hp + fx.hpChange))
+  // HP change — 仅游戏模式
+  if (isGameMode) {
+    newPlayer.hp = Math.max(0, Math.min(newPlayer.maxHp, newPlayer.hp + fx.hpChange))
+  }
 
-  // Item collection
-  if (fx.addItem) {
+  // Item collection — 仅游戏模式
+  if (isGameMode && fx.addItem) {
     newPlayer.inventory = [...newPlayer.inventory, fx.addItem]
     newWorld.items = newWorld.items.map(item =>
       item.name === fx.addItem ? { ...item, collected: true } : item
     )
   }
 
-  // Item removal
-  if (fx.removeItem) {
+  // Item removal — 仅游戏模式
+  if (isGameMode && fx.removeItem) {
     newPlayer.inventory = newPlayer.inventory.filter(i => i !== fx.removeItem)
   }
 
-  // Player movement
-  if (fx.movePlayer) {
+  // Player movement — 仅游戏模式
+  if (isGameMode && fx.movePlayer) {
     const [x, y] = fx.movePlayer
     if (x >= 0 && x < world.dimensions[0] && y >= 0 && y < world.dimensions[1]) {
       const tileId = world.map[y][x]
@@ -63,7 +68,7 @@ export function applyEffects(
     }
   }
 
-  // Agent reactions — update memory streams
+  // Agent reactions — 所有模式都需要（记忆/态度系统是核心）
   if (fx.agentReactions) {
     newWorld.agents = newWorld.agents.map(agent => {
       const reaction = fx.agentReactions.find(r => r.agentId === agent.id)
@@ -124,9 +129,11 @@ export async function processAction(
   world: WorldSchema,
   player: PlayerState,
   action: string,
-  recentEvents: string[]
+  recentEvents: string[],
+  mode: ScenarioMode = 'game'
 ): Promise<{ response: ActionResponse; debug: DebugLog; corrections: string[]; firedRules: string[] }> {
   const nearbyAgents = getNearbyAgents(world.agents, player.position)
+  const config = getScenarioConfig(mode)
 
   const prompt = buildActionPrompt(
     world,
@@ -134,14 +141,16 @@ export async function processAction(
     action,
     nearbyAgents,
     recentEvents,
-    player.steps
+    player.steps,
+    config.actionModifier || undefined,
+    mode
   )
 
   const { data, debug } = await callGemini(prompt, 'action')
 
   // Step 1: Normalize raw LLM output into expected schema
   const rawResponse: ActionResponse = {
-    narrative: data.narrative || 'Something happens...',
+    narrative: data.narrative || '发生了一些事情...',
     effects: {
       hpChange: data.effects?.hpChange || 0,
       addItem: data.effects?.addItem || null,
@@ -150,18 +159,37 @@ export async function processAction(
       agentReactions: data.effects?.agentReactions || [],
       mapChange: data.effects?.mapChange || null,
     },
-    choices: data.choices || ['Look around', 'Wait', 'Move on'],
+    choices: data.choices || getDefaultFallbackChoices(mode),
     worldEvent: data.worldEvent || null,
     gameOver: data.gameOver || false,
     gameOverReason: data.gameOverReason || null,
   }
 
   // Step 2: Rule Engine Validation — correct impossible/illegal actions
-  const { sanitized, corrections } = validateAndCorrect(rawResponse, world, player)
+  const { sanitized, corrections } = validateAndCorrect(rawResponse, world, player, mode)
 
   // Step 3: Check deterministic rule triggers
   const triggers = checkRuleTriggers(world, player)
   const firedRules = triggers.map(t => t.effect)
 
   return { response: sanitized, debug, corrections, firedRules }
+}
+
+/**
+ * 根据模式返回合适的默认选项（LLM 未返回 choices 时使用）
+ */
+function getDefaultFallbackChoices(mode: ScenarioMode): string[] {
+  switch (mode) {
+    case 'training':
+      return [
+        '[推进谈判] 基于已有信息向对方提出具体的解决方案框架，争取达成阶段性共识',
+        '[策略调整] 重新评估当前各方态势，调整自身的优先级排序和谈判策略',
+        '[寻求外部支持] 引入第三方资源或信息来打破当前僵局',
+      ]
+    case 'simulation':
+      return [] // 仿真模式不需要人工选项
+    case 'game':
+    default:
+      return ['仔细搜索这个地方', '找人问问情况', '往别处走走看']
+  }
 }

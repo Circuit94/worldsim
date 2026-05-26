@@ -57,10 +57,13 @@ export default function ActionPanel() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-xs text-gray-500 uppercase tracking-wider">可选行动</h3>
-        <span className="text-[10px] text-gray-700">按 1-{choices.length} 选择，/ 输入自定义</span>
+        {choices.length > 0 && (
+          <span className="text-[10px] text-gray-700">按 1-{choices.length} 选择，/ 输入自定义</span>
+        )}
       </div>
 
       {/* AI 生成的选项 */}
+      {choices.length > 0 && (
       <div className="grid grid-cols-1 gap-2">
         {choices.map((choice, i) => (
           <button
@@ -81,6 +84,7 @@ export default function ActionPanel() {
           </button>
         ))}
       </div>
+      )}
 
       {/* 自定义行动输入 */}
       <div className="flex gap-2">

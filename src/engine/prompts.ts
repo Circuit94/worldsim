@@ -1,74 +1,55 @@
 /**
- * WorldSim Engine — Prompt Templates
+ * WorldSim Engine — 提示词模板
  * 
- * Two-prompt architecture for minimal token consumption:
- * 1. World Generation (~2300 tokens total)
- * 2. Action Response (~1000 tokens per step)
- * 
- * Design Principles:
- * - Structured JSON output via schema constraints
- * - Sliding window context (last 3 events only)
- * - NPC memory injection for emergent social dynamics
+ * 按模式分叉的提示词架构：
+ * - 游戏模式：完整的空间/HP/物品/NPC 游戏 prompt
+ * - 培训模式：管理情景评估 prompt（无空间/HP/物品概念）
+ * - 仿真模式：多智能体推演 prompt（无玩家/空间概念）
  */
 
-import type { WorldSchema, Agent, PlayerState, Observation } from './types'
+import type { WorldSchema, Agent, PlayerState } from './types'
+import type { ScenarioMode } from './scenarios'
 
 // ============================================================
-// Prompt 1: World Generation
+// 提示词 1：世界生成（仅游戏模式使用，培训/仿真通过 modifier 完全覆盖）
 // ============================================================
 
 export function buildWorldGenPrompt(theme: string, seed: string): string {
-  return `You are a world simulation architect. Generate a 7x7 tile-based world based on the theme below.
+  return `生成一个 5×5 地块世界。主题: "${theme}" | 种子: "${seed}"
 
-THEME: "${theme}"
-SEED: "${seed}"
-
-REQUIREMENTS:
-- Create a coherent, atmospheric world with 3-5 distinct areas
-- Include 2-4 NPCs with unique personalities, goals, and decision styles  
-- Place 2-3 collectible items that are meaningful to the world's narrative
-- Define 2-3 causal rules (events that trigger based on conditions)
-- The world should feel alive — NPCs have their own agendas independent of the player
-
-OUTPUT FORMAT (strict JSON):
+严格JSON输出，中文：
 {
-  "name": "World name (creative, evocative)",
-  "description": "2-sentence world backstory",
-  "map": [["tile_id", ...], ...],  // 7 rows × 7 cols
-  "tiles": {
-    "tile_id": { "emoji": "🏚️", "name": "Abandoned House", "walkable": true, "description": "..." }
-  },
+  "name": "世界名（4字以内）",
+  "description": "一句话背景",
+  "map": [["tile_id",...],...]  // 5行×5列
+  "tiles": { "tile_id": { "name": "地名（2-4字）", "walkable": true, "description": "一句话环境描述" } },
   "agents": [
-    {
-      "id": "agent_1",
-      "name": "Character Name",
-      "emoji": "👤",
-      "position": [x, y],
-      "persona": "Detailed personality, background, speaking style",
-      "goals": ["Goal 1", "Goal 2"],
-      "decisionStyle": "rational|emotional|chaotic"
-    }
+    { "id": "agent_1", "name": "角色名（2-3字）", "position": [x,y], "persona": "性格+目标+说话风格（50字内）", "goals": ["目标"], "decisionStyle": "rational|emotional|chaotic" }
   ],
   "items": [
-    { "id": "item_1", "name": "Item Name", "emoji": "🗝️", "position": [x, y], "description": "What it is and why it matters" }
+    { "id": "item_1", "name": "物品名（2-4字）", "position": [x,y], "description": "一句话" }
   ],
   "rules": [
-    { "id": "rule_1", "trigger": "When condition is met", "effect": "What happens in the world" }
+    { "id": "rule_1", "trigger": "经过N步后...", "effect": "发生什么" }
   ],
-  "winCondition": "Clear description of how the player wins",
-  "playerStart": [x, y]
+  "winCondition": "胜利条件（用地点名称描述，禁止出现坐标数字）",
+  "playerStart": [x,y]
 }
 
-CONSTRAINTS:
-- Use diverse emoji for tiles (nature: 🌲🌿⛰️🌊, structures: 🏚️🏰🏪🏠, paths: 🛤️)
-- Ensure player start position is walkable
-- At least one NPC should be initially friendly, one neutral, one potentially hostile
-- Map should have clear pathways connecting areas (not random noise)
-- Keep all text concise — this is a simulation, not a novel`
+约束:
+- 5×5 紧凑地图，3-4个区域，路径相连
+- 2-3个NPC（友好/中立/敌对各一），id用agent_1格式
+- 2个物品，2条规则
+- 地名、角色名都要短（2-4字），不要长词
+- tiles的description要体现环境特征（如"昏暗的金属走廊"/"长满苔藓的石墙"），系统会根据关键词自动匹配视觉样式
+- 禁止输出emoji字段，所有视觉由系统自动生成
+- 玩家起点可行走
+- 所有文本极简，不要文学修辞
+- winCondition 必须用地点名称描述目标位置（如"到达逃生舱"），严禁出现坐标如(0,4)`
 }
 
 // ============================================================
-// Prompt 2: Action Response
+// 提示词 2：行动响应 — 按模式完全分叉
 // ============================================================
 
 export function buildActionPrompt(
@@ -77,67 +58,199 @@ export function buildActionPrompt(
   action: string,
   nearbyAgents: Agent[],
   recentEvents: string[],
-  stepCount: number
+  stepCount: number,
+  actionModifier?: string,
+  mode: ScenarioMode = 'game'
+): string {
+  switch (mode) {
+    case 'training':
+      return buildTrainingActionPrompt(world, player, action, nearbyAgents, recentEvents, stepCount, actionModifier)
+    case 'simulation':
+      return buildSimulationActionPrompt(world, player, action, nearbyAgents, recentEvents, stepCount, actionModifier)
+    case 'game':
+    default:
+      return buildGameActionPrompt(world, player, action, nearbyAgents, recentEvents, stepCount, actionModifier)
+  }
+}
+
+// ============================================================
+// 游戏模式 Action Prompt
+// ============================================================
+
+function buildGameActionPrompt(
+  world: WorldSchema,
+  player: PlayerState,
+  action: string,
+  nearbyAgents: Agent[],
+  recentEvents: string[],
+  stepCount: number,
+  actionModifier?: string
 ): string {
   const currentTile = world.map[player.position[1]][player.position[0]]
   const tileDef = world.tiles[currentTile]
   
-  // Build NPC memory context (lightweight — only nearby agents)
+  // 精简 agent context — 只保留最关键信息
   const agentContext = nearbyAgents.map(a => {
-    const recentObs = a.memory.observations.slice(-3).map(o => o.content).join('; ')
-    return `- ${a.name} (${a.persona.slice(0, 60)}...) | Attitude: ${a.memory.attitude}/100 | Knows: [${a.memory.knownFacts.join(', ')}] | Recent: ${recentObs || 'Nothing yet'}`
+    const lastObs = a.memory.observations.slice(-1)[0]?.content || ''
+    return `${a.name}(${a.id}): 态度${a.memory.attitude} | ${lastObs || a.persona.slice(0, 30)}`
   }).join('\n')
 
-  // Determine if a world event should fire (every 4 steps)
-  const shouldGenerateWorldEvent = stepCount > 0 && stepCount % 4 === 0
+  // 每3步触发世界事件（而非4步），加快节奏
+  const shouldGenerateWorldEvent = stepCount > 0 && stepCount % 3 === 0
 
-  return `You are the Game Master of "${world.name}". Narrate the result of the player's action.
+  return `「${world.name}」— ${world.description}
+位置: ${tileDef.name} [${player.position}] | HP: ${player.hp}/${player.maxHp} | 背包: ${player.inventory.join('、') || '无'} | 步数: ${stepCount}
+${agentContext ? `附近:\n${agentContext}` : ''}
+${recentEvents.length > 0 ? `最近: ${recentEvents.slice(-2).join(' → ')}` : ''}
+${world.rules.filter(r => !r.fired).length > 0 ? `规则: ${world.rules.filter(r => !r.fired).map(r => r.trigger + '→' + r.effect).join('; ')}` : ''}
 
-WORLD: ${world.description}
-CURRENT LOCATION: ${tileDef.name} (${tileDef.emoji}) — ${tileDef.description || 'No description'}
-PLAYER POSITION: [${player.position}]
-PLAYER HP: ${player.hp}/${player.maxHp}
-INVENTORY: [${player.inventory.join(', ') || 'empty'}]
-STEP: ${stepCount}
+行动: "${action}"
+${shouldGenerateWorldEvent ? '【本轮需附带一个世界自发事件】' : ''}
 
-NEARBY AGENTS:
-${agentContext || '(none)'}
-
-RECENT HISTORY (last 3):
-${recentEvents.slice(-3).map((e, i) => `${i + 1}. ${e}`).join('\n') || '(none)'}
-
-WORLD RULES (unfired):
-${world.rules.filter(r => !r.fired).map(r => `- IF ${r.trigger} THEN ${r.effect}`).join('\n') || '(none active)'}
-
-PLAYER ACTION: "${action}"
-
-${shouldGenerateWorldEvent ? `⚡ WORLD EVENT REQUIRED: Since this is step ${stepCount}, generate an autonomous world event that happens REGARDLESS of the player's action. The world evolves on its own.` : ''}
-
-OUTPUT (strict JSON):
+输出严格JSON:
 {
-  "narrative": "Vivid 1-2 sentence narration of what happens (max 80 chars)",
+  "narrative": "一句话描述结果（15-30字，写实、不堆砌修辞）",
+  "effects": {
+    "hpChange": 0,
+    "addItem": null,
+    "removeItem": null,
+    "movePlayer": null,
+    "agentReactions": [{"agentId":"agent_1","reaction":"简短反应","attitudeChange":0,"newObservation":"记住什么"}],
+    "mapChange": null
+  },
+  "choices": ["具体动作A", "具体动作B", "具体动作C"],
+  "worldEvent": ${shouldGenerateWorldEvent ? '{"description":"简短事件","mapChanges":[],"affectedAgents":[]}' : 'null'},
+  "gameOver": false,
+  "gameOverReason": null
+}
+
+写作规则:
+- narrative 必须简短有力。像短信不像散文。错误示例:"你沿着蜿蜒的小路走向村东，艾琳的小屋掩映在枯藤老树间，烟囱飘出缕缕青烟"。正确示例:"艾琳的屋里有动静。木门半开，桌上摊着发光的粉末。"
+- 绝对禁止这些词: 蜿蜒、掩映、缕缕、潺潺、斑驳、氤氲、流淌、弥漫、笼罩、徐徐、袅袅。这些是AI套话。
+- 要有信息增量：每句话必须推进剧情或揭示新信息，不要纯环境描写。
+- choices 必须是玩家可以立即执行的具体动作（"翻开桌上的笔记""质问她那粉末是什么"），不要抽象描述（"探索周围""继续观察"）。
+- movePlayer: 如果行动涉及移动，必须返回新坐标 [x,y]，确保与 narrative 描述的地点一致。
+- agentReactions 的 agentId 用 id 格式如 "agent_1"
+- 每步推进一个有意义的事件节拍（beat）：一个发现、一次交锋、一个选择后果。不要只描写走路。
+${actionModifier ? `\n${actionModifier}` : ''}`
+}
+
+// ============================================================
+// 培训模式 Action Prompt — 完全独立，无任何游戏概念
+// ============================================================
+
+function buildTrainingActionPrompt(
+  world: WorldSchema,
+  player: PlayerState,
+  action: string,
+  nearbyAgents: Agent[],
+  recentEvents: string[],
+  stepCount: number,
+  actionModifier?: string
+): string {
+  // 培训模式：所有 agent 都参与（无空间距离概念）
+  const allAgents = world.agents
+  const agentContext = allAgents.map(a => {
+    const recentObs = a.memory.observations.slice(-3).map(o => o.content).join('；')
+    return `- ${a.name}（id: ${a.id}）| 角色: ${a.persona.slice(0, 80)} | 态度: ${a.memory.attitude}/100 | 近期认知: ${recentObs || '初始状态'}`
+  }).join('\n')
+
+  const maxSteps = 15
+
+  return `你是一个管理情景模拟评估系统。根据决策者的行动推进情景发展。
+
+情景名称: ${world.name}
+情景背景: ${world.description}
+评估目标: ${world.winCondition}
+当前轮次: ${stepCount}/${maxSteps}
+
+利益相关方：
+${agentContext}
+
+近期进展：
+${recentEvents.slice(-3).map((e, i) => `${i + 1}. ${e}`).join('\n') || '（情景刚启动）'}
+
+待触发的环境事件：
+${world.rules.filter(r => !r.fired).map(r => `- 条件: ${r.trigger} → 效果: ${r.effect}`).join('\n') || '（无待触发事件）'}
+
+决策者的行动: "${action}"
+
+输出（严格 JSON，所有文本为中文）：
+{
+  "narrative": "情景进展描述（案例复盘风格，100-200字）",
   "effects": {
     "hpChange": 0,
     "addItem": null,
     "removeItem": null,
     "movePlayer": null,
     "agentReactions": [
-      { "agentId": "id", "reaction": "What they do/say", "attitudeChange": 0, "newObservation": "What they now remember" }
+      { "agentId": "agent_1", "reaction": "该角色的回应和立场变化", "attitudeChange": 0, "newObservation": "该角色对决策者形成的新判断" }
     ],
     "mapChange": null
   },
-  "choices": ["Choice A", "Choice B", "Choice C"],
-  "worldEvent": ${shouldGenerateWorldEvent ? '{ "description": "What happens in the world autonomously", "mapChanges": [], "affectedAgents": [] }' : 'null'},
+  "choices": ["[策略名] 具体方案描述（至少20字）", "[策略名] 具体方案描述", "[策略名] 具体方案描述"],
+  "worldEvent": null,
   "gameOver": false,
   "gameOverReason": null
 }
 
-RULES:
-- Narrative must be atmospheric and concise
-- Agent reactions should reflect their memory and personality
-- If player does something an agent witnesses, add it to their observation
-- Attitude changes should be small (-10 to +10 per action)
-- Choices should be meaningfully different (not just "go left/right")
-- gameOver=true only if HP<=0 or winCondition is clearly met
-- World events should feel organic — weather changes, NPC movements, resource depletion`
+${actionModifier || ''}`
+}
+
+// ============================================================
+// 仿真模式 Action Prompt — 完全独立，无玩家/空间概念
+// ============================================================
+
+function buildSimulationActionPrompt(
+  world: WorldSchema,
+  player: PlayerState,
+  action: string,
+  nearbyAgents: Agent[],
+  recentEvents: string[],
+  stepCount: number,
+  actionModifier?: string
+): string {
+  const allAgents = world.agents
+  const agentContext = allAgents.map(a => {
+    const recentObs = a.memory.observations.slice(-3).map(o => o.content).join('；')
+    return `- ${a.name}（id: ${a.id}）| 决策模型: ${a.decisionStyle} | 目标: ${a.goals.join('、')} | 态度: ${a.memory.attitude}/100 | 近期状态: ${recentObs || '初始状态'}`
+  }).join('\n')
+
+  const maxSteps = 20
+
+  return `你是一个多智能体仿真推演引擎。执行第 ${stepCount + 1}/${maxSteps} 轮自主推演。
+
+仿真名称: ${world.name}
+仿真设定: ${world.description}
+观测目标: ${world.winCondition}
+
+智能体状态：
+${agentContext}
+
+历史摘要（最近3轮）：
+${recentEvents.slice(-3).map((e, i) => `${i + 1}. ${e}`).join('\n') || '（第一轮）'}
+
+环境调度器（未触发）：
+${world.rules.filter(r => !r.fired).map(r => `- 条件: ${r.trigger} → 效果: ${r.effect}`).join('\n') || '（无待触发事件）'}
+
+输出（严格 JSON，所有文本为中文）：
+{
+  "narrative": "本轮推演结果（系统观察者视角，描述各Agent决策行为和交互效果）",
+  "effects": {
+    "hpChange": 0,
+    "addItem": null,
+    "removeItem": null,
+    "movePlayer": null,
+    "agentReactions": [
+      { "agentId": "agent_1", "reaction": "该Agent本轮的决策行为", "attitudeChange": 0, "newObservation": "该Agent获得的新认知" }
+    ],
+    "mapChange": null
+  },
+  "choices": [],
+  "worldEvent": null,
+  "gameOver": false,
+  "gameOverReason": null
+}
+
+${actionModifier || ''}`
 }

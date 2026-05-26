@@ -8,6 +8,17 @@ WorldSim is an open-source AI world simulation engine that transforms natural la
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)
 ![AI](https://img.shields.io/badge/AI-Gemini_2.5_Flash-orange)
 ![Architecture](https://img.shields.io/badge/Architecture-Generative_Agents-purple)
+![Visuals](https://img.shields.io/badge/Visuals-Pixel_Art_Tiles-green)
+
+## 🎨 Visual System
+
+WorldSim features a custom **pixel-art visual system** — no emoji, no CSS hacks. Every terrain tile and character avatar is a pre-generated 48×48 PNG with hand-crafted pixel art aesthetics:
+
+**17 Terrain Tiles** — Forest, Grass, Water, Mountain, Desert, Lava, Ice, Swamp, Cave, Building, Village, Road, Corridor, Ruin, Tech, Default, Unwalkable
+
+**13 Character Avatars** — Warrior, Mage, Merchant, Villager, Guard, Thief, Scholar, Elder, Robot, Monster, Princess, Healer, Player
+
+The engine uses intelligent **keyword matching** to assign visuals based on AI-generated descriptions. A tile described as "dense pine forest with morning mist" automatically renders with the forest tile; an NPC described as "a wise old herbalist" gets the healer avatar. Hash-based fallback ensures every entity always has a unique, deterministic visual.
 
 ## ✨ What Makes This Different
 
@@ -48,7 +59,7 @@ WorldSim is an open-source AI world simulation engine that transforms natural la
 │                                                                   │
 ├─────────────────────────────────────────────────────────────────┤
 │                   Renderer (Pluggable)                            │
-│  Emoji Grid (current) │ Terminal ASCII │ 3D (future) │ API-only  │
+│  Pixel Art Grid (current) │ Terminal ASCII │ 3D (future) │ API-only│
 └─────────────────────────────────────────────────────────────────┘
 ```
 
