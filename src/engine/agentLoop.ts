@@ -45,7 +45,7 @@ function shouldReflect(agent: Agent): boolean {
  *    score = importance * 0.6 + recencyNorm * 0.4
  * 3. Lowest-scoring regular memories are dropped first
  */
-function retainWithImportance(
+export function retainWithImportance(
   observations: Array<{ step: number; content: string; importance: number }>,
   maxSize: number
 ): Array<{ step: number; content: string; importance: number }> {
@@ -88,7 +88,7 @@ function retainWithImportance(
  * - Fill remaining slots with most recent observations
  * - Cap total at maxSlots to control token budget
  */
-function retrieveRelevantMemory(agent: Agent, maxSlots: number = 5): string {
+export function retrieveRelevantMemory(agent: Agent, maxSlots: number = 5): string {
   const obs = agent.memory.observations
   if (obs.length === 0) return '暂无'
 
@@ -164,7 +164,8 @@ ${triggerReflection ? '反思任务：根据近期观察形成一条更高层级
 }
 
 /**
- * Get context about what's near the agent
+ * Get context about what's near the agent.
+ * In training/simulation mode, all agents can perceive each other (no spatial limit).
  */
 function getAgentNearbyContext(
   agent: Agent,
@@ -172,31 +173,34 @@ function getAgentNearbyContext(
   player: PlayerState
 ): string {
   const parts: string[] = []
+  const isTrainingOrSim = world.mode === 'training' || world.mode === 'simulation'
   
-  // Check if player is nearby
+  // Check if player is nearby (always visible in training mode)
   const distToPlayer = Math.abs(agent.position[0] - player.position[0]) + 
                        Math.abs(agent.position[1] - player.position[1])
-  if (distToPlayer <= 2) {
+  if (isTrainingOrSim || distToPlayer <= 2) {
     parts.push(`玩家（距离 ${distToPlayer}）`)
   }
 
-  // Check for other nearby agents
+  // Check for other nearby agents (all visible in training mode)
   for (const other of world.agents) {
     if (other.id === agent.id) continue
     const dist = Math.abs(agent.position[0] - other.position[0]) + 
                  Math.abs(agent.position[1] - other.position[1])
-    if (dist <= 2) {
-      parts.push(`${other.name}（距离 ${dist}）`)
+    if (isTrainingOrSim || dist <= 2) {
+      parts.push(`${other.name}（${isTrainingOrSim ? '同场' : `距离 ${dist}`}）`)
     }
   }
 
-  // Check for nearby items
-  for (const item of world.items) {
-    if (item.collected) continue
-    const dist = Math.abs(agent.position[0] - item.position[0]) + 
-                 Math.abs(agent.position[1] - item.position[1])
-    if (dist <= 1) {
-      parts.push(`[物品:${item.name}]`)
+  // Check for nearby items (skip in training mode — no spatial items)
+  if (!isTrainingOrSim) {
+    for (const item of world.items) {
+      if (item.collected) continue
+      const dist = Math.abs(agent.position[0] - item.position[0]) + 
+                   Math.abs(agent.position[1] - item.position[1])
+      if (dist <= 1) {
+        parts.push(`[物品:${item.name}]`)
+      }
     }
   }
 
@@ -206,6 +210,8 @@ function getAgentNearbyContext(
 /**
  * Execute one agent's autonomous tick
  * Returns the tick result + debug log, or null if skipped
+ * 
+ * In training mode, all agents can perceive each other (no spatial distance limit)
  */
 export async function executeAgentTick(
   world: WorldSchema,

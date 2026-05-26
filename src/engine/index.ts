@@ -52,7 +52,7 @@ export type { ScenarioMode, ScenarioConfig } from './scenarios'
 // Individual modules (for custom pipelines)
 export { generateWorld, getPlayerStart } from './worldGen'
 export { processAction, applyEffects } from './actionHandler'
-export { executeAgentTick, applyAgentTick, getTickingAgent } from './agentLoop'
+export { executeAgentTick, applyAgentTick, getTickingAgent, retainWithImportance, retrieveRelevantMemory } from './agentLoop'
 export { validateAndCorrect, checkRuleTriggers, markRulesFired } from './ruleEngine'
 export { checkConnectivity, repairConnectivity, validateAndRepairMap } from './mapValidator'
 export type { ConnectivityReport } from './mapValidator'

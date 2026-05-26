@@ -1,73 +1,15 @@
 /**
  * Agent Memory Tests
  * 
- * Tests the importance-weighted memory retention system.
- * Verifies that high-importance observations are never evicted
- * while regular observations follow recency + importance scoring.
+ * Tests the importance-weighted memory retention system using the REAL
+ * exported functions from agentLoop.ts — not copies.
+ * 
+ * Also tests applyAgentTick to verify memory integration behavior.
  */
 
 import { describe, it, expect } from 'vitest'
-
-// We test the internal functions by importing the module and testing behavior
-// through the exported applyAgentTick function's memory updates.
-// For unit testing, we'll extract and test retainWithImportance directly.
-
-// Since retainWithImportance is not exported, we replicate its logic for testing.
-// This ensures the algorithm is correct independently of the agent loop.
-
-function retainWithImportance(
-  observations: Array<{ step: number; content: string; importance: number }>,
-  maxSize: number
-): Array<{ step: number; content: string; importance: number }> {
-  if (observations.length <= maxSize) return observations
-
-  const coreMemories = observations.filter(o => o.importance >= 7)
-  const regularMemories = observations.filter(o => o.importance < 7)
-
-  const regularSlots = Math.max(0, maxSize - coreMemories.length)
-
-  if (regularSlots === 0) {
-    return coreMemories.slice(-maxSize)
-  }
-
-  const maxStep = Math.max(...regularMemories.map(o => o.step), 1)
-  const scored = regularMemories.map(o => ({
-    ...o,
-    score: (o.importance / 10) * 0.6 + (o.step / maxStep) * 0.4,
-  }))
-
-  scored.sort((a, b) => b.score - a.score)
-  const keptRegular = scored.slice(0, regularSlots).map(({ score, ...rest }) => rest)
-
-  const result = [...coreMemories, ...keptRegular]
-  result.sort((a, b) => a.step - b.step)
-  return result
-}
-
-function retrieveRelevantMemory(
-  observations: Array<{ step: number; content: string; importance: number }>,
-  maxSlots: number = 5
-): string {
-  if (observations.length === 0) return '暂无'
-
-  const coreMemories = observations.filter(o => o.importance >= 7)
-  const regularMemories = observations.filter(o => o.importance < 7)
-
-  const coreSlots = Math.min(coreMemories.length, Math.ceil(maxSlots / 2))
-  const regularSlots = maxSlots - coreSlots
-
-  const selected = [
-    ...coreMemories.slice(-coreSlots),
-    ...regularMemories.slice(-regularSlots),
-  ]
-
-  selected.sort((a, b) => a.step - b.step)
-
-  return selected.map(o => {
-    const marker = o.importance >= 7 ? '★' : '·'
-    return `${marker} ${o.content}`
-  }).join('; ')
-}
+import { retainWithImportance, retrieveRelevantMemory, applyAgentTick } from '../agentLoop'
+import type { Agent, WorldSchema, AgentTickResult } from '../types'
 
 // ============================================================
 // retainWithImportance tests
@@ -115,9 +57,8 @@ describe('Agent Memory — retainWithImportance', () => {
 
     const result = retainWithImportance(obs, 3)
     expect(result).toHaveLength(3)
-    // Should keep higher-scoring observations
+    // "old boring" (lowest score) should be evicted
     const contents = result.map(o => o.content)
-    // "old boring" (score = 0.06 + 0.03 = 0.09) should be evicted
     expect(contents).not.toContain('old boring')
   })
 
@@ -175,24 +116,43 @@ describe('Agent Memory — retainWithImportance', () => {
 // ============================================================
 
 describe('Agent Memory — retrieveRelevantMemory', () => {
+  function makeAgent(observations: Array<{ step: number; content: string; importance: number }>): Agent {
+    return {
+      id: 'test_agent',
+      name: 'Test',
+      position: [0, 0],
+      persona: 'test persona',
+      goals: ['test'],
+      decisionStyle: 'rational',
+      memory: {
+        observations,
+        reflections: [],
+        attitude: 0,
+        knownFacts: [],
+        currentPlan: null,
+      },
+    }
+  }
+
   it('returns "暂无" for empty observations', () => {
-    const result = retrieveRelevantMemory([], 5)
+    const agent = makeAgent([])
+    const result = retrieveRelevantMemory(agent, 5)
     expect(result).toBe('暂无')
   })
 
   it('marks core memories with ★ and regular with ·', () => {
-    const obs = [
+    const agent = makeAgent([
       { step: 1, content: 'routine task', importance: 3 },
       { step: 2, content: 'critical discovery', importance: 8 },
-    ]
+    ])
 
-    const result = retrieveRelevantMemory(obs, 5)
+    const result = retrieveRelevantMemory(agent, 5)
     expect(result).toContain('★ critical discovery')
     expect(result).toContain('· routine task')
   })
 
   it('includes core memories even when there are many recent ones', () => {
-    const obs = [
+    const agent = makeAgent([
       { step: 1, content: 'core event', importance: 9 },
       { step: 2, content: 'r1', importance: 2 },
       { step: 3, content: 'r2', importance: 3 },
@@ -200,9 +160,9 @@ describe('Agent Memory — retrieveRelevantMemory', () => {
       { step: 5, content: 'r4', importance: 1 },
       { step: 6, content: 'r5', importance: 2 },
       { step: 7, content: 'r6', importance: 3 },
-    ]
+    ])
 
-    const result = retrieveRelevantMemory(obs, 3)
+    const result = retrieveRelevantMemory(agent, 3)
     // Core memory must be included despite being old
     expect(result).toContain('★ core event')
   })
@@ -213,25 +173,133 @@ describe('Agent Memory — retrieveRelevantMemory', () => {
       content: `observation ${i}`,
       importance: 3,
     }))
+    const agent = makeAgent(obs)
 
-    const result = retrieveRelevantMemory(obs, 3)
+    const result = retrieveRelevantMemory(agent, 3)
     // Should have at most 3 entries (separated by '; ')
     const entries = result.split('; ')
     expect(entries.length).toBeLessThanOrEqual(3)
   })
 
   it('outputs in chronological order', () => {
-    const obs = [
+    const agent = makeAgent([
       { step: 5, content: 'late', importance: 8 },
       { step: 1, content: 'early', importance: 3 },
       { step: 3, content: 'middle', importance: 4 },
-    ]
+    ])
 
-    const result = retrieveRelevantMemory(obs, 5)
+    const result = retrieveRelevantMemory(agent, 5)
     const earlyIdx = result.indexOf('early')
     const middleIdx = result.indexOf('middle')
     const lateIdx = result.indexOf('late')
     expect(earlyIdx).toBeLessThan(middleIdx)
     expect(middleIdx).toBeLessThan(lateIdx)
+  })
+})
+
+// ============================================================
+// applyAgentTick integration tests — verify memory is actually updated
+// ============================================================
+
+describe('Agent Memory — applyAgentTick integration', () => {
+  function makeWorld(agents: Agent[]): WorldSchema {
+    return {
+      id: 'test_world',
+      name: 'Test',
+      seed: 'test',
+      theme: 'test',
+      description: 'test',
+      dimensions: [5, 5],
+      map: [['grass', 'grass', 'grass', 'grass', 'grass']],
+      tiles: { grass: { name: '草地', walkable: true } },
+      agents,
+      items: [],
+      rules: [],
+      winCondition: 'test',
+      mode: 'game',
+    }
+  }
+
+  it('uses retainWithImportance when adding observations via applyAgentTick', () => {
+    // Create agent with 14 existing observations (just under the 15 cap)
+    const existingObs = Array.from({ length: 14 }, (_, i) => ({
+      step: i,
+      content: `obs ${i}`,
+      importance: 2,
+    }))
+    // Add one core memory
+    existingObs[5] = { step: 5, content: 'critical event', importance: 9 }
+
+    const agent: Agent = {
+      id: 'agent_1',
+      name: 'Alice',
+      position: [1, 0],
+      persona: 'test',
+      goals: ['test'],
+      decisionStyle: 'rational',
+      memory: {
+        observations: existingObs,
+        reflections: [],
+        attitude: 0,
+        knownFacts: [],
+        currentPlan: null,
+      },
+    }
+
+    const world = makeWorld([agent])
+    const tickResult: AgentTickResult = {
+      agentId: 'agent_1',
+      action: 'new action from tick',
+      narrative: 'something happened',
+      newPosition: null,
+      newReflection: null,
+      newPlan: null,
+      interactsWithAgent: null,
+    }
+
+    const updatedWorld = applyAgentTick(world, tickResult, 15)
+    const updatedAgent = updatedWorld.agents[0]
+
+    // Should be capped at 15 (not 15+1=16)
+    expect(updatedAgent.memory.observations.length).toBeLessThanOrEqual(15)
+    // Core memory must still be present
+    expect(updatedAgent.memory.observations.some(o => o.content === 'critical event')).toBe(true)
+    // New observation must be present
+    expect(updatedAgent.memory.observations.some(o => o.content === 'new action from tick')).toBe(true)
+  })
+
+  it('preserves reflections and plans from tick results', () => {
+    const agent: Agent = {
+      id: 'agent_1',
+      name: 'Bob',
+      position: [0, 0],
+      persona: 'test',
+      goals: ['test'],
+      decisionStyle: 'rational',
+      memory: {
+        observations: [{ step: 0, content: 'initial', importance: 3 }],
+        reflections: ['old reflection'],
+        attitude: 10,
+        knownFacts: [],
+        currentPlan: 'old plan',
+      },
+    }
+
+    const world = makeWorld([agent])
+    const tickResult: AgentTickResult = {
+      agentId: 'agent_1',
+      action: 'did something',
+      narrative: 'narrative',
+      newPosition: null,
+      newReflection: 'new insight about the world',
+      newPlan: 'new plan to explore',
+      interactsWithAgent: null,
+    }
+
+    const updatedWorld = applyAgentTick(world, tickResult, 1)
+    const updatedAgent = updatedWorld.agents[0]
+
+    expect(updatedAgent.memory.reflections).toContain('new insight about the world')
+    expect(updatedAgent.memory.currentPlan).toBe('new plan to explore')
   })
 })

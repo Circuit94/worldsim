@@ -8,6 +8,7 @@
 import type { WorldSchema, Agent, AgentMemory } from './types'
 import { buildWorldGenPrompt } from './prompts'
 import { callGemini } from '../api/gemini'
+import { validateAndRepairMap } from './mapValidator'
 import type { DebugLog } from './types'
 
 function generateSeed(theme: string): string {
@@ -70,7 +71,17 @@ export async function generateWorld(
     mode: 'game',
   }
 
-  return { world, debug }
+  // Validate and auto-repair map connectivity
+  const playerStart = data.playerStart || [2, 2]
+  const { world: validatedWorld, report } = validateAndRepairMap(world, playerStart)
+  
+  if (report.repairsApplied > 0) {
+    console.info(
+      `[WorldGen] Map auto-repaired: ${report.repairsApplied} tiles converted for connectivity.`
+    )
+  }
+
+  return { world: validatedWorld, debug }
 }
 
 export function getPlayerStart(data: any): [number, number] {

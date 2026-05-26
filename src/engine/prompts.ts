@@ -191,8 +191,22 @@ ${world.rules.filter(r => !r.fired).map(r => `- 条件: ${r.trigger} → 效果:
   "choices": ["[策略名] 具体方案描述（至少20字）", "[策略名] 具体方案描述", "[策略名] 具体方案描述"],
   "worldEvent": null,
   "gameOver": false,
-  "gameOverReason": null
+  "gameOverReason": null,
+  "evalTags": [
+    {"dimension": "分析判断力", "grade": "A"},
+    {"dimension": "决策魄力", "grade": "B"},
+    {"dimension": "利益相关方管理", "grade": "B"},
+    {"dimension": "沟通影响力", "grade": "A"},
+    {"dimension": "战略格局", "grade": "C"}
+  ]
 }
+
+评估标签规则（evalTags 为必填字段）：
+- 每轮必须输出 5 个维度的评估标签
+- 维度固定为：分析判断力、决策魄力、利益相关方管理、沟通影响力、战略格局
+- 等级为 S/A/B/C/D，基于决策者本轮行动的表现
+- S=卓越 A=优秀 B=良好 C=一般 D=不足
+- 评估依据：决策者的行动是否体现了该维度的能力（如分析判断力看是否基于信息做判断，决策魄力看是否果断明确）
 
 ${actionModifier || ''}`
 }

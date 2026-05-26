@@ -13,6 +13,7 @@ import { buildActionPrompt } from './prompts'
 import { callGemini } from '../api/gemini'
 import { validateAndCorrect, checkRuleTriggers, markRulesFired } from './ruleEngine'
 import { type ScenarioMode, getScenarioConfig } from './scenarios'
+import { retainWithImportance } from './agentLoop'
 
 /**
  * Get agents within Manhattan distance 2 of a position
@@ -82,7 +83,10 @@ export function applyEffects(
 
       const newMemory = {
         ...agent.memory,
-        observations: [...agent.memory.observations.slice(-9), newObs], // Cap at 10
+        observations: retainWithImportance(
+          [...agent.memory.observations, newObs],
+          15  // Same cap as agentLoop — importance-weighted retention
+        ),
         attitude: Math.max(-100, Math.min(100, agent.memory.attitude + reaction.attitudeChange)),
         knownFacts: reaction.newObservation
           ? [...new Set([...agent.memory.knownFacts, reaction.newObservation])]

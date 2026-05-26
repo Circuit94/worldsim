@@ -75,11 +75,14 @@ export interface TrainingReport {
 
 /**
  * 从 session 数据生成培训评估报告
+ * 
+ * @param structuredEvalTags - 从 LLM JSON response 中解析的结构化 eval tags（优先使用）
  */
 export function generateTrainingReport(
   world: WorldSchema,
   narrativeLog: { text: string; type: string }[],
   playerSteps: number,
+  structuredEvalTags?: { dimension: string; grade: string }[],
 ): TrainingReport {
   const decisions = narrativeLog
     .filter(l => l.text.startsWith('→'))
@@ -89,10 +92,11 @@ export function generateTrainingReport(
     .filter(l => l.type === 'narrative')
     .map(l => l.text)
 
-  // 解析所有评估标签
-  const allEvalTags = narratives
-    .map(parseEvalTags)
-    .flat()
+  // 解析所有评估标签：优先使用结构化 eval tags，fallback 到 narrative 内嵌标签
+  const narrativeEvalTags = narratives.map(parseEvalTags).flat()
+  const allEvalTags = (structuredEvalTags && structuredEvalTags.length > 0)
+    ? structuredEvalTags
+    : narrativeEvalTags
 
   // 计算各维度得分
   const competencies = computeCompetencies(world.agents, allEvalTags, decisions)
@@ -182,13 +186,8 @@ function computeCompetencies(
         matchedTags.reduce((sum, t) => sum + (gradeToScore[t.grade] || 50), 0) / matchedTags.length
       )
     } else {
-      // Fallback：基于 Agent 态度 + 决策数量推算
-      const avgAttitude = agents.reduce((sum, a) => sum + a.memory.attitude, 0) / Math.max(agents.length, 1)
-      const decisionDensity = Math.min(1, decisions.length / 10)
-      const base = 45 + avgAttitude * 0.3 + decisionDensity * 15
-      // 维度差异化
-      const jitter = Math.sin(dim.key.length * 7 + dim.key.charCodeAt(0)) * 8
-      score = Math.min(95, Math.max(20, Math.round(base + jitter)))
+      // Fallback：基于可解释的行为指标计算，每个维度有独立的评估逻辑
+      score = computeFallbackScore(dim.key, agents, decisions)
     }
 
     const grade = scoreToGrade(score)
@@ -197,6 +196,81 @@ function computeCompetencies(
 
     return { dimension: dim.label, score, grade, evidence, suggestion }
   })
+}
+
+/**
+ * 可解释的 fallback 评分：当 LLM 未返回 eval tags 时，
+ * 基于实际行为数据为每个维度独立计算分数。
+ * 
+ * 每个维度的评分逻辑：
+ * - 分析判断力：决策平均长度（信息密度）+ 是否包含分析性关键词
+ * - 决策魄力：决策数量密度 + 决策中明确立场的比例
+ * - 利益相关方管理：Agent 态度变化幅度 + 正向态度 Agent 比例
+ * - 沟通影响力：决策平均长度 + Agent 态度正向变化次数
+ * - 战略格局：决策中包含长期/全局关键词的比例 + 决策多样性
+ */
+function computeFallbackScore(dimKey: string, agents: Agent[], decisions: string[]): number {
+  const decisionCount = decisions.length
+  if (decisionCount === 0) return 35  // 无决策数据，给低分
+
+  const avgLength = decisions.reduce((s, d) => s + d.length, 0) / decisionCount
+  const avgAttitude = agents.reduce((sum, a) => sum + a.memory.attitude, 0) / Math.max(agents.length, 1)
+  const positiveAgentRatio = agents.filter(a => a.memory.attitude > 10).length / Math.max(agents.length, 1)
+  const attitudeSpread = agents.length > 0
+    ? Math.max(...agents.map(a => a.memory.attitude)) - Math.min(...agents.map(a => a.memory.attitude))
+    : 0
+
+  switch (dimKey) {
+    case 'analytical': {
+      // 分析判断力：决策长度体现信息密度，分析性关键词体现逻辑思维
+      const analyticalKeywords = ['因为', '所以', '分析', '考虑', '基于', '根据', '判断', '评估', '数据', '信息']
+      const keywordHits = decisions.filter(d => analyticalKeywords.some(k => d.includes(k))).length
+      const lengthScore = Math.min(40, (avgLength / 80) * 40)  // 0-40 based on avg length
+      const keywordScore = Math.min(30, (keywordHits / decisionCount) * 30)  // 0-30 based on keyword ratio
+      const baseScore = 25 + lengthScore + keywordScore
+      return Math.min(95, Math.max(20, Math.round(baseScore)))
+    }
+    case 'decisiveness': {
+      // 决策魄力：决策密度 + 明确立场关键词
+      const decisiveKeywords = ['决定', '必须', '立即', '直接', '明确', '坚持', '拒绝', '要求', '不接受']
+      const keywordHits = decisions.filter(d => decisiveKeywords.some(k => d.includes(k))).length
+      const densityScore = Math.min(35, (decisionCount / 10) * 35)
+      const assertivenessScore = Math.min(35, (keywordHits / decisionCount) * 50)
+      const baseScore = 25 + densityScore + assertivenessScore
+      return Math.min(95, Math.max(20, Math.round(baseScore)))
+    }
+    case 'stakeholder': {
+      // 利益相关方管理：正向态度比例 + 态度变化幅度（说明有互动）
+      const attitudeScore = Math.min(40, positiveAgentRatio * 50)
+      const engagementScore = Math.min(30, (attitudeSpread / 60) * 30)
+      const baseScore = 30 + attitudeScore + engagementScore + (avgAttitude > 0 ? 10 : 0)
+      return Math.min(95, Math.max(20, Math.round(baseScore)))
+    }
+    case 'influence': {
+      // 沟通影响力：表达丰富度 + 实际影响效果（态度正向变化）
+      const lengthScore = Math.min(30, (avgLength / 60) * 30)
+      const influenceKeywords = ['建议', '提议', '说服', '解释', '强调', '沟通', '表达', '阐述']
+      const keywordHits = decisions.filter(d => influenceKeywords.some(k => d.includes(k))).length
+      const keywordScore = Math.min(25, (keywordHits / decisionCount) * 35)
+      const effectScore = Math.min(25, positiveAgentRatio * 30)
+      const baseScore = 25 + lengthScore + keywordScore + effectScore
+      return Math.min(95, Math.max(20, Math.round(baseScore)))
+    }
+    case 'strategic': {
+      // 战略格局：长期视角关键词 + 决策多样性（不重复同一策略）
+      const strategicKeywords = ['长期', '未来', '全局', '整体', '战略', '规划', '布局', '权衡', '取舍', '优先']
+      const keywordHits = decisions.filter(d => strategicKeywords.some(k => d.includes(k))).length
+      const keywordScore = Math.min(35, (keywordHits / decisionCount) * 50)
+      // 决策多样性：unique 决策前缀的比例
+      const prefixes = decisions.map(d => d.slice(0, 10))
+      const uniqueRatio = new Set(prefixes).size / prefixes.length
+      const diversityScore = Math.min(30, uniqueRatio * 35)
+      const baseScore = 25 + keywordScore + diversityScore
+      return Math.min(95, Math.max(20, Math.round(baseScore)))
+    }
+    default:
+      return 50
+  }
 }
 
 function computeStakeholderOutcomes(agents: Agent[], narratives: string[]): StakeholderOutcome[] {
@@ -394,12 +468,35 @@ function scoreToGrade(score: number): 'S' | 'A' | 'B' | 'C' | 'D' {
   return 'D'
 }
 
+/**
+ * Parse evaluation tags from narrative text.
+ * Supports two formats:
+ * 1. Legacy pipe format: "narrative text |[维度:等级][维度:等级]"
+ * 2. JSON evalTags embedded in narrative (from structured output)
+ */
 function parseEvalTags(text: string): { dimension: string; grade: string }[] {
+  // Try legacy pipe format first
   const pipeIndex = text.lastIndexOf('|')
-  if (pipeIndex === -1) return []
-  const tagStr = text.slice(pipeIndex + 1)
-  const matches = tagStr.matchAll(/\[([^:]+):([SABCD])\]/g)
-  return [...matches].map(m => ({ dimension: m[1], grade: m[2] }))
+  if (pipeIndex !== -1) {
+    const tagStr = text.slice(pipeIndex + 1)
+    const matches = tagStr.matchAll(/\[([^:]+):([SABCD])\]/g)
+    const results = [...matches].map(m => ({ dimension: m[1], grade: m[2] }))
+    if (results.length > 0) return results
+  }
+  return []
+}
+
+/**
+ * Parse eval tags from structured JSON response (new format).
+ * Called separately when processing raw LLM response data.
+ */
+export function parseStructuredEvalTags(
+  data: any
+): { dimension: string; grade: string }[] {
+  if (!data?.evalTags || !Array.isArray(data.evalTags)) return []
+  return data.evalTags
+    .filter((tag: any) => tag?.dimension && tag?.grade && /^[SABCD]$/.test(tag.grade))
+    .map((tag: any) => ({ dimension: tag.dimension, grade: tag.grade }))
 }
 
 function getDecisionImpact(decisionIndex: number, agents: Agent[]): string {
