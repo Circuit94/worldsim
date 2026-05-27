@@ -24,7 +24,10 @@ export default function NarrativeLog() {
       </div>
       <div className="max-h-[320px] min-h-[120px] overflow-y-auto space-y-1 p-3 bg-gray-900/30 rounded-lg border border-gray-800 text-sm">
         {narrativeLog.length === 0 && (
-          <p className="text-gray-600 text-xs italic">世界尚未开始演化...</p>
+          <div className="text-gray-600 text-xs space-y-1 py-2">
+            <p className="italic">世界尚未开始演化...</p>
+            <p className="text-[10px] text-gray-700">提示：按 1-5 快速选择行动，按 / 输入自定义行动</p>
+          </div>
         )}
         {narrativeLog.map((entry, i) => {
           // System entries (player actions, round markers)

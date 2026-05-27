@@ -1,153 +1,128 @@
 /**
- * WorldSim — Landing Page (一屏完成投资人叙事)
+ * WorldSim — Landing Page (用户导向)
  * 
  * 设计原则：
- * - 一屏内完成 Hook → 痛点 → 方案 → 壁垒 → CTA 的完整闭环
- * - 不用 emoji 做视觉锤，改用文字标签 + 色彩区分
- * - 信息密度高但不杂乱，适合投资人 30 秒扫完
+ * - 3 秒内让用户理解「这是什么 + 我能做什么」
+ * - 用场景化语言替代投资人话术
+ * - 模式选择用用户视角描述，不用 B/C 端标签
+ * - 突出「立即体验」的行动路径
  */
 
-export default function LandingHero({ onEnter }: { onEnter: () => void }) {
+import { hasAutoSave, loadAutoSave } from '../engine/persistence'
+
+export default function LandingHero({ onEnter }: { onEnter: (resumeAutoSave?: boolean) => void }) {
+  const hasSave = hasAutoSave()
+  const saveData = hasSave ? loadAutoSave() : null
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 max-w-5xl mx-auto">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 max-w-4xl mx-auto">
       
-      {/* ===== Top: Hook ===== */}
-      <div className="text-center space-y-3 mb-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/50 border border-purple-800/50 text-[11px] text-purple-300">
-          <span className="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          MVP 已上线 · 7 天独立开发 · MIT 开源
-        </div>
-        
+      {/* ===== Top: Hook — 用户能理解的一句话 ===== */}
+      <div className="text-center space-y-4 mb-10">
         <h1 className="text-4xl sm:text-5xl font-bold">
           <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
             WorldSim
           </span>
         </h1>
         
-        <p className="text-lg sm:text-xl text-gray-200 font-light">
-          用一句话生成一个<span className="text-purple-300 font-medium">有记忆的世界</span>
-        </p>
-        
-        <p className="text-xs text-gray-500 max-w-lg mx-auto leading-relaxed">
-          AI 世界模拟引擎 — NPC 拥有记忆和自主目标，世界遵循因果规则自动演化。
-          不只是游戏，更是企业培训、行为仿真、AI Agent 测试的底层引擎。
+        <p className="text-lg sm:text-xl text-gray-200 font-light max-w-lg mx-auto leading-relaxed">
+          输入一句话，生成一个<span className="text-purple-300 font-medium">有记忆的 AI 世界</span>
+          <br />
+          <span className="text-base text-gray-400">NPC 会记住你做过什么，世界会因你的选择而改变</span>
         </p>
       </div>
 
-      {/* ===== Middle: 三列 — 痛点 + 方案一体化 ===== */}
-      <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+      {/* ===== Middle: 三种玩法 — 用户视角描述 ===== */}
+      <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
         <ModeCard
-          label="C 端"
-          labelColor="text-cyan-400 border-cyan-800 bg-cyan-950/30"
-          mode="探索模式"
-          pain="AI 叙事产品只有纯文本，无结构无记忆"
-          solution="玩家输入主题即生成可交互世界，NPC 有态度有记忆"
-          metric="留存验证 · 引擎 Demo"
+          icon="🗺️"
+          title="探索一个 AI 世界"
+          description="描述任何主题，引擎即时生成可探索的世界。NPC 有自己的记忆和目标，会根据你的行为改变态度。"
+          example="「赛博朋克城市里的地下黑市」"
         />
         <ModeCard
-          label="B 端"
-          labelColor="text-purple-300 border-purple-700 bg-purple-950/40"
-          mode="培训模式"
-          pain="企业培训靠 PPT + 真人扮演，贵且无法规模化"
-          solution="AI 模拟职业场景，自动评估决策质量，输出能力报告"
-          metric="¥5-50/次/人 · 核心变现"
+          icon="🎯"
+          title="模拟一次职场挑战"
+          description="面对 AI 扮演的客户、同事或上级，在压力场景中做决策。系统自动评估你的应变能力和沟通策略。"
+          example="「说服一个犹豫的大客户签约」"
           highlight
         />
         <ModeCard
-          label="平台"
-          labelColor="text-green-400 border-green-800 bg-green-950/30"
-          mode="仿真 SDK"
-          pain="AI Agent 上线前缺少安全测试环境"
-          solution="Headless API，批量跑行为仿真和策略 A/B 测试"
-          metric="API 计费 · 无需 UI"
+          icon="🔬"
+          title="观察 AI 角色互动"
+          description="设定多个 AI 角色和规则，观察他们如何自主行动、结盟或冲突。适合研究涌现行为。"
+          example="「5 个性格迥异的人困在荒岛」"
         />
-      </div>
-
-      {/* ===== Bottom-left: 技术壁垒（紧凑横条） ===== */}
-      <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-2 mb-8 text-[10px]">
-        <TechChip title="Stanford GenAgents" detail="观察→记忆→反思→规划→行动" />
-        <TechChip title="规则引擎兜底" detail="7 道硬约束，LLM 输出不失控" />
-        <TechChip title="~200 Token/回合" detail="成本仅全量上下文的 1/20" />
-        <TechChip title="种子可复现" detail="相同种子 = 相同世界，支持对照实验" />
-      </div>
-
-      {/* ===== 市场验证 — 一行紧凑 ===== */}
-      <div className="w-full flex flex-wrap items-center justify-center gap-3 mb-8 text-[10px] text-gray-500">
-        <span className="text-gray-400">同赛道已融资：</span>
-        <MarketTag name="Artificial Societies" info="YC W25 · $5.35M" />
-        <MarketTag name="AgentHub" info="YC S25" />
-        <MarketTag name="Tavus/Synthesia" info="$78M+" />
-        <MarketTag name="AI Dungeon" info="$200M+ 营收" />
       </div>
 
       {/* ===== CTA ===== */}
       <div className="text-center space-y-3">
+        {/* 继续上次 */}
+        {hasSave && saveData && (
+          <button
+            onClick={() => onEnter(true)}
+            className="w-full sm:w-auto px-8 py-3 rounded-xl font-medium text-sm
+                       bg-gray-800 border border-gray-700
+                       hover:border-purple-500 hover:bg-gray-750
+                       transition-all duration-200 mb-2 block sm:inline-block"
+          >
+            <span className="text-gray-300">继续上次：</span>
+            <span className="text-purple-300 ml-1">{saveData.worldName}</span>
+            <span className="text-gray-500 text-xs ml-2">({saveData.steps}步)</span>
+          </button>
+        )}
+
         <button
-          onClick={onEnter}
+          onClick={() => onEnter(false)}
           className="px-10 py-3.5 rounded-xl font-medium text-base
                      bg-gradient-to-r from-purple-600 to-cyan-600 
                      hover:from-purple-500 hover:to-cyan-500
                      transition-all duration-300 shadow-lg shadow-purple-900/30
                      hover:shadow-purple-700/40 hover:scale-[1.03] active:scale-[0.98]"
         >
-          立即体验 →
+          开始新体验 →
         </button>
-        <p className="text-[10px] text-gray-600">
-          DeepSeek / Gemini · 无需注册 · 密钥仅存浏览器本地
+        
+        <p className="text-[11px] text-gray-500 mt-2">
+          需要 DeepSeek 或 Gemini API Key · 密钥仅存浏览器本地，不经过任何服务器
         </p>
       </div>
 
-      {/* ===== Footer 极简 ===== */}
-      <div className="mt-6 text-[9px] text-gray-700 text-center">
-        TypeScript · React 19 · Vite 6 · MIT · 独立开发 · 参考: Park et al. "Generative Agents" (UIST 2023)
+      {/* ===== 底部：简洁技术亮点（不喧宾夺主） ===== */}
+      <div className="mt-12 pt-6 border-t border-gray-800/50 w-full">
+        <div className="flex flex-wrap justify-center gap-4 text-[10px] text-gray-600">
+          <span>基于 Stanford Generative Agents 论文</span>
+          <span>·</span>
+          <span>~200 Token/Agent/回合</span>
+          <span>·</span>
+          <span>7 层规则引擎兜底 LLM</span>
+          <span>·</span>
+          <span>MIT 开源</span>
+        </div>
       </div>
     </div>
   )
 }
 
 // ============================================================
-// Sub-components — 无 emoji，用文字标签 + 色彩
+// Sub-components
 // ============================================================
 
 function ModeCard({ 
-  label, labelColor, mode, pain, solution, metric, highlight 
+  icon, title, description, example, highlight 
 }: { 
-  label: string; labelColor: string; mode: string
-  pain: string; solution: string; metric: string; highlight?: boolean 
+  icon: string; title: string; description: string; example: string; highlight?: boolean 
 }) {
   return (
-    <div className={`p-4 rounded-lg border space-y-2.5 transition-all ${
+    <div className={`p-5 rounded-xl border space-y-3 transition-all ${
       highlight 
-        ? 'border-purple-600 bg-purple-950/30 ring-1 ring-purple-800/40' 
-        : 'border-gray-800 bg-gray-900/30'
+        ? 'border-purple-600/60 bg-purple-950/20 ring-1 ring-purple-800/30' 
+        : 'border-gray-800 bg-gray-900/30 hover:border-gray-700'
     }`}>
-      <div className="flex items-center gap-2">
-        <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${labelColor}`}>
-          {label}
-        </span>
-        <span className="text-sm font-medium text-gray-200">{mode}</span>
-      </div>
-      <p className="text-[11px] text-red-400/70 leading-relaxed">✗ {pain}</p>
-      <p className="text-[11px] text-green-400/70 leading-relaxed">✓ {solution}</p>
-      <p className="text-[10px] text-gray-500 font-mono border-t border-gray-800/50 pt-1.5 mt-1">{metric}</p>
+      <div className="text-2xl">{icon}</div>
+      <h3 className="text-sm font-medium text-gray-200">{title}</h3>
+      <p className="text-[12px] text-gray-400 leading-relaxed">{description}</p>
+      <p className="text-[11px] text-gray-600 italic">{example}</p>
     </div>
-  )
-}
-
-function TechChip({ title, detail }: { title: string; detail: string }) {
-  return (
-    <div className="p-2 rounded border border-gray-800 bg-gray-900/40 space-y-0.5">
-      <p className="text-gray-300 font-medium text-[10px]">{title}</p>
-      <p className="text-gray-600 text-[9px]">{detail}</p>
-    </div>
-  )
-}
-
-function MarketTag({ name, info }: { name: string; info: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-gray-800 bg-gray-900/40">
-      <span className="text-gray-300">{name}</span>
-      <span className="text-green-500">{info}</span>
-    </span>
   )
 }

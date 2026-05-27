@@ -86,38 +86,43 @@ export default function ActionPanel() {
       </div>
       )}
 
-      {/* 自定义行动输入 */}
-      <div className="flex gap-2">
-        <input
-          ref={inputRef}
-          type="text"
-          value={customAction}
-          onChange={e => setCustomAction(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleAction(customAction)}
-          placeholder="输入自定义行动...（按 / 聚焦）"
-          disabled={isProcessing}
-          className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm
-                     focus:outline-none focus:border-cyan-500 transition-colors
-                     disabled:opacity-40"
-        />
-        <button
-          onClick={() => handleAction(customAction)}
-          disabled={!customAction.trim() || isProcessing}
-          className="px-4 py-2 text-sm rounded-lg bg-cyan-900 border border-cyan-700
-                     hover:bg-cyan-800 disabled:opacity-40 transition-colors"
-        >
-          执行
-        </button>
+      {/* 自定义行动输入 — 始终可见 */}
+      <div className="space-y-1">
+        <div className="flex gap-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={customAction}
+            onChange={e => setCustomAction(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAction(customAction)}
+            placeholder="做点别的...（按 / 聚焦）"
+            disabled={isProcessing}
+            className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm
+                       focus:outline-none focus:border-cyan-500 transition-colors
+                       disabled:opacity-40"
+          />
+          <button
+            onClick={() => handleAction(customAction)}
+            disabled={!customAction.trim() || isProcessing}
+            className="px-4 py-2 text-sm rounded-lg bg-cyan-900 border border-cyan-700
+                       hover:bg-cyan-800 disabled:opacity-40 transition-colors"
+          >
+            ↵
+          </button>
+        </div>
+        {choices.length > 0 && (
+          <p className="text-[10px] text-gray-700 pl-1">不限于上面的选项，你可以尝试任何行动</p>
+        )}
       </div>
 
       {isProcessing && (
-        <div className="flex items-center justify-center gap-2 text-xs text-gray-500 py-2">
+        <div className="flex items-center justify-center gap-2 text-xs text-gray-500 py-2 animate-pulse">
           <div className="flex gap-1">
             <span className="animate-bounce" style={{ animationDelay: '0ms' }}>●</span>
             <span className="animate-bounce" style={{ animationDelay: '150ms' }}>●</span>
             <span className="animate-bounce" style={{ animationDelay: '300ms' }}>●</span>
           </div>
-          <span>世界正在思考...</span>
+          <span>Agent 正在观察、反思、决策...</span>
         </div>
       )}
     </div>

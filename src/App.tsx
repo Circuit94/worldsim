@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useGameStore } from './store/gameStore'
 import { getAgentVisual } from './engine/tileVisuals'
+import { loadAutoSave } from './engine/persistence'
 import LandingHero from './components/LandingHero'
 import WorldInput from './components/WorldInput'
 import GameMap from './components/GameMap'
@@ -18,7 +19,28 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(true)
 
   if (phase === 'setup' && showLanding) {
-    return <LandingHero onEnter={() => setShowLanding(false)} />
+    return <LandingHero onEnter={(resumeAutoSave) => {
+      if (resumeAutoSave) {
+        const save = loadAutoSave()
+        if (save) {
+          // Restore auto-save state directly into the store
+          useGameStore.setState({
+            phase: 'playing',
+            world: save.world,
+            player: save.player,
+            narrativeLog: save.narrativeLog,
+            choices: save.choices,
+            debugLogs: save.debugLogs,
+            totalTokensUsed: save.totalTokensUsed,
+            scenarioMode: save.mode,
+            isProcessing: false,
+            error: null,
+          })
+          return
+        }
+      }
+      setShowLanding(false)
+    }} />
   }
 
   if (phase === 'setup') {
@@ -54,6 +76,7 @@ export default function App() {
              scenarioMode === 'training' ? '正在构建评估情景...' : 
              '正在部署仿真环境...'}
           </p>
+          <p className="text-gray-600 text-xs">通常需要 5-15 秒，取决于模型响应速度</p>
           <div className="text-gray-700 text-[10px] space-y-1">
             {loadingText.map((t, i) => <p key={i}>{t}</p>)}
           </div>

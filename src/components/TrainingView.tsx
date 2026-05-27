@@ -317,7 +317,7 @@ export default function TrainingView() {
 // 辅助组件
 // ============================================================
 
-/** 能力维度评分条 */
+/** 能力维度评分条 — 带等级解释和对比锚点 */
 function CompetencyBar({ label, score, description }: { label: string; score: number; description: string }) {
   const grade = score >= 90 ? 'S' : score >= 75 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : 'D'
   const gradeColor = {
@@ -327,23 +327,39 @@ function CompetencyBar({ label, score, description }: { label: string; score: nu
     C: 'text-orange-400 bg-orange-950/50 border-orange-800/50',
     D: 'text-red-400 bg-red-950/50 border-red-800/50',
   }[grade]
+  const gradeExplanation = {
+    S: '卓越 — 超出预期的高水平表现',
+    A: '优秀 — 明显高于平均水平',
+    B: '良好 — 达到基本预期',
+    C: '待提升 — 低于预期，有改进空间',
+    D: '薄弱 — 需要重点关注和训练',
+  }[grade]
   const barColor = score >= 75 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-orange-500'
 
   return (
-    <div>
+    <div className="group">
       <div className="flex items-center justify-between mb-1">
         <span className="text-[11px] text-gray-300">{label}</span>
         <span className={`text-[9px] px-1.5 py-0.5 rounded border font-mono font-medium ${gradeColor}`}>
           {grade}
         </span>
       </div>
-      <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+      <div className="relative h-1.5 bg-gray-800 rounded-full overflow-hidden">
         <div 
           className={`h-full ${barColor} rounded-full transition-all duration-700`} 
           style={{ width: `${score}%` }} 
         />
+        {/* 对比锚点：60分基准线 */}
+        <div className="absolute top-0 left-[60%] w-px h-full bg-gray-600/50" />
       </div>
-      <p className="text-[9px] text-gray-600 mt-0.5">{description}</p>
+      <div className="flex items-center justify-between mt-0.5">
+        <p className="text-[9px] text-gray-600">{description}</p>
+        <span className="text-[8px] text-gray-700 font-mono">{score}</span>
+      </div>
+      {/* Hover 时显示等级解释 */}
+      <p className="text-[8px] text-gray-700 mt-0.5 hidden group-hover:block transition-all">
+        {gradeExplanation}
+      </p>
     </div>
   )
 }
