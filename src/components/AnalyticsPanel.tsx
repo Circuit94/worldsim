@@ -89,10 +89,12 @@ export default function AnalyticsPanel() {
       <div className="space-y-2">
         <p className="text-[10px] text-gray-600 uppercase tracking-wider">角色关系</p>
         {analytics.attitudeTimeline.map(agent => (
-          <div key={agent.id} className="flex items-center gap-2 text-xs">
-            <AgentDot name={agent.name} agentId={agent.agentId} />
-            <span className="w-20 truncate text-gray-400">{agent.name}</span>
-            <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden relative">
+          <div key={agent.id} className="flex items-center gap-2 text-xs h-6">
+            <div className="shrink-0 w-5 h-5">
+              <AgentDot name={agent.name} agentId={agent.agentId} />
+            </div>
+            <span className="shrink-0 w-12 truncate text-gray-400">{agent.name}</span>
+            <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden relative min-w-0">
               <div
                 className={`h-full transition-all duration-500 ${
                   agent.attitude > 0 ? 'bg-green-500' : agent.attitude < 0 ? 'bg-red-500' : 'bg-gray-600'
@@ -104,7 +106,7 @@ export default function AnalyticsPanel() {
               />
               <div className="absolute inset-y-0 left-1/2 w-px bg-gray-600" />
             </div>
-            <span className={`w-8 text-right font-mono ${
+            <span className={`shrink-0 w-8 text-right font-mono ${
               agent.attitude > 0 ? 'text-green-400' : agent.attitude < 0 ? 'text-red-400' : 'text-gray-500'
             }`}>
               {agent.attitude > 0 ? '+' : ''}{agent.attitude}
@@ -202,7 +204,7 @@ function AgentDot({ name, agentId }: { name: string; agentId: string }) {
     <img
       src={visual.avatarUrl}
       alt={visual.initial}
-      className="w-5 h-5 rounded-full border object-cover shrink-0"
+      className="w-5 h-5 rounded-full border object-cover block"
       style={{ borderColor: visual.accentColor, imageRendering: 'pixelated' }}
     />
   )
