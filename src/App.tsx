@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useGameStore } from './store/gameStore'
 import { getAgentVisual } from './engine/tileVisuals'
-import { loadAutoSave } from './engine/persistence'
+import { loadAutoSave, getStoredApiKey } from './engine/persistence'
 import LandingHero from './components/LandingHero'
 import WorldInput from './components/WorldInput'
 import GameMap from './components/GameMap'
@@ -23,6 +23,11 @@ export default function App() {
       if (resumeAutoSave) {
         const save = loadAutoSave()
         if (save) {
+          // Restore API key first so performAction can call LLM
+          const storedKey = getStoredApiKey()
+          if (storedKey) {
+            useGameStore.getState().setApiKey(storedKey)
+          }
           // Restore auto-save state directly into the store
           useGameStore.setState({
             phase: 'playing',
