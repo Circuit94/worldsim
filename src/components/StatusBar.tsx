@@ -10,11 +10,11 @@ export default function StatusBar() {
 
   return (
     <div className="flex flex-wrap items-center gap-4 text-xs px-4 py-3 
-                    glass-surface rounded-xl">
+                    ws-surface rounded-xl">
       {/* 生命值 */}
       <div className="flex items-center gap-2">
         <span className="text-[var(--ws-text-muted)] text-[10px] uppercase tracking-wide">HP</span>
-        <div className="w-20 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+        <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
           <div
             className={`h-full ${hpColor} rounded-full transition-all duration-300`}
             style={{ width: `${hpPercent}%` }}

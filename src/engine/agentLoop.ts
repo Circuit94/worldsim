@@ -118,8 +118,76 @@ export function retrieveRelevantMemory(agent: Agent, maxSlots: number = 5): stri
 /**
  * Build compact prompt for agent autonomous tick
  * Designed to be extremely token-efficient (~150-200 input tokens)
+ * 
+ * Mode-aware: spatial prompts for 'game' mode, abstract prompts for training/simulation
  */
 function buildAgentTickPrompt(
+  agent: Agent,
+  world: WorldSchema,
+  player: PlayerState,
+  nearbyContext: string
+): string {
+  const isNonSpatial = world.mode === 'training' || world.mode === 'simulation'
+  
+  if (isNonSpatial) {
+    return buildNonSpatialAgentPrompt(agent, world, nearbyContext)
+  }
+  return buildSpatialAgentPrompt(agent, world, player, nearbyContext)
+}
+
+/**
+ * Prompt for training/simulation modes — no spatial concepts at all.
+ * Agent thinks in terms of decisions, communications, and role-based actions.
+ */
+function buildNonSpatialAgentPrompt(
+  agent: Agent,
+  world: WorldSchema,
+  nearbyContext: string
+): string {
+  const recentObs = retrieveRelevantMemory(agent, 5)
+  const reflections = agent.memory.reflections.length > 0 
+    ? agent.memory.reflections.slice(-2).join('; ')
+    : '暂无'
+  
+  const triggerReflection = shouldReflect(agent)
+
+  const modeLabel = world.mode === 'training' ? '情景模拟' : '仿真推演'
+
+  return `你是「${agent.name}」，在一个${modeLabel}中扮演角色。
+人设: ${agent.persona.slice(0, 120)}
+决策风格: ${agent.decisionStyle} | 目标: ${agent.goals.slice(0, 3).join('、')}
+近期记忆: ${recentObs || '暂无'}
+反思: ${reflections}
+当前计划: ${agent.memory.currentPlan || '无'}
+对决策者态度: ${agent.memory.attitude}/100
+同场角色: ${nearbyContext || '无'}
+
+情景背景: ${world.description.slice(0, 150)}
+
+${triggerReflection ? '反思任务：根据近期经历形成一条关于局势或人际关系的洞察。\n' : ''}根据你的角色定位和当前局势，决定你的下一步行动。
+
+输出 JSON（所有文本必须是中文）:
+{
+  "action": "你做了什么具体行动（如：发起沟通、提出方案、表达不满、推进工作、调整策略等）",
+  "narrative": "一句话描述你的行为和意图（最多30字，不要描写物理动作或空间移动）",
+  "newPosition": null,
+  "newReflection": ${triggerReflection ? '"你对局势的新洞察"' : 'null'},
+  "newPlan": "你接下来打算怎么做" or null,
+  "interactsWithAgent": "agent_id" or null
+}
+
+规则:
+- 你的行动必须符合角色身份和情景设定
+- 行动类型包括：沟通、决策、表态、施压、妥协、合作、对抗、等待时机等
+- 绝对禁止出现物理空间描述（如"走向""站在""观察四周""环顾""移动"等）
+- 如果当前没有需要立即行动的事，可以"维持现状"或"暗中观察局势变化"
+- 所有文本输出必须是中文`
+}
+
+/**
+ * Prompt for game mode — spatial world with positions, movement, tiles
+ */
+function buildSpatialAgentPrompt(
   agent: Agent,
   world: WorldSchema,
   player: PlayerState,
@@ -159,7 +227,7 @@ ${triggerReflection ? '反思任务：根据近期观察形成一条更高层级
 - 只能移动 1 格（曼哈顿距离）
 - 保持在边界内 [0-${world.dimensions[0] - 1}]
 - 忠于你的性格和目标
-- 如果没有有趣的事，就“等待”或“观察周围”
+- 如果没有有趣的事，就"等待"或"观察周围"
 - 所有文本输出必须是中文`
 }
 
@@ -179,7 +247,7 @@ function getAgentNearbyContext(
   const distToPlayer = Math.abs(agent.position[0] - player.position[0]) + 
                        Math.abs(agent.position[1] - player.position[1])
   if (isTrainingOrSim || distToPlayer <= 2) {
-    parts.push(`玩家（距离 ${distToPlayer}）`)
+    parts.push(isTrainingOrSim ? '决策者' : `玩家（距离 ${distToPlayer}）`)
   }
 
   // Check for other nearby agents (all visible in training mode)
@@ -188,7 +256,7 @@ function getAgentNearbyContext(
     const dist = Math.abs(agent.position[0] - other.position[0]) + 
                  Math.abs(agent.position[1] - other.position[1])
     if (isTrainingOrSim || dist <= 2) {
-      parts.push(`${other.name}（${isTrainingOrSim ? '同场' : `距离 ${dist}`}）`)
+      parts.push(isTrainingOrSim ? `${other.name}` : `${other.name}（距离 ${dist}）`)
     }
   }
 

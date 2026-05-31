@@ -23,7 +23,7 @@ export default function NarrativeLog() {
         <span className="text-[10px] text-[var(--ws-text-muted)] font-mono">{narrativeLog.length} 条</span>
       </div>
       <div className="max-h-[320px] min-h-[120px] overflow-y-auto space-y-1.5 p-4 
-                      glass-surface rounded-xl text-sm">
+                      ws-surface rounded-xl text-sm">
         {narrativeLog.length === 0 && (
           <div className="text-[var(--ws-text-muted)] text-xs space-y-1.5 py-4 text-center">
             <p className="italic">世界尚未开始演化...</p>
@@ -43,8 +43,8 @@ export default function NarrativeLog() {
           // Event entries (rule effects, world events)
           if (entry.type === 'event') {
             return (
-              <div key={i} className="text-amber-400/80 text-xs leading-5 pl-0 flex items-start gap-1.5">
-                <span className="text-amber-500/60 shrink-0">◆</span>
+              <div key={i} className="text-amber-700 text-xs leading-5 pl-0 flex items-start gap-1.5">
+                <span className="text-amber-500 shrink-0">◆</span>
                 <span>{entry.text}</span>
               </div>
             )
@@ -55,7 +55,7 @@ export default function NarrativeLog() {
           if (parsed) {
             return (
               <div key={i} className="flex items-start gap-1.5 leading-5 min-h-[20px]">
-                <span className="shrink-0 text-blue-400/70 text-xs font-mono whitespace-nowrap">
+                <span className="shrink-0 text-indigo-500 text-xs font-mono whitespace-nowrap">
                   [{parsed.agentName}]
                 </span>
                 <span className="text-[var(--ws-text-primary)] break-words min-w-0">
@@ -69,7 +69,7 @@ export default function NarrativeLog() {
           return (
             <div key={i} className="text-[var(--ws-text-primary)] leading-6 flex items-start gap-1.5">
               {!entry.text.startsWith('→') && (
-                <span className="text-purple-400/50 shrink-0">▸</span>
+                <span className="text-indigo-400 shrink-0">▸</span>
               )}
               <span className="break-words min-w-0">{entry.text}</span>
             </div>

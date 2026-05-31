@@ -32,14 +32,14 @@ export default function ActionPanel() {
 
   if (phase === 'gameover') {
     return (
-      <div className="glass-card rounded-2xl p-5 space-y-4">
+      <div className="ws-card rounded-2xl p-5 space-y-4">
         <div className="text-center text-sm text-[var(--ws-text-secondary)] py-4">
           模拟已结束
         </div>
         <button
           onClick={() => useGameStore.getState().reset()}
           className="w-full py-2.5 rounded-xl text-sm font-medium
-                     btn-ghost hover:btn-ghost-hover cursor-pointer"
+                     ws-btn-ghost hover:ws-btn-ghost-hover cursor-pointer"
         >
           重新开始
         </button>
@@ -54,7 +54,7 @@ export default function ActionPanel() {
   }
 
   return (
-    <div className="glass-card rounded-2xl p-5 space-y-4">
+    <div className="ws-card rounded-2xl p-5 space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-medium text-[var(--ws-text-secondary)] uppercase tracking-wider">可选行动</h3>
         {choices.length > 0 && (
@@ -71,13 +71,13 @@ export default function ActionPanel() {
             onClick={() => handleAction(choice)}
             disabled={isProcessing}
             className="text-left px-4 py-3 text-sm rounded-xl
-                       bg-white/[0.02] border border-white/[0.06]
-                       hover:border-purple-500/30 hover:bg-purple-500/[0.04]
+                       bg-[var(--ws-surface-alt)] border border-[var(--ws-border)]
+                       hover:border-indigo-300 hover:bg-indigo-50/50
                        disabled:opacity-40 disabled:cursor-not-allowed
                        transition-all duration-200 group cursor-pointer"
           >
-            <kbd className="text-[10px] text-[var(--ws-text-muted)] bg-white/[0.04] px-1.5 py-0.5 rounded mr-2
-                           group-hover:text-purple-400 group-hover:bg-purple-500/10 transition-colors font-mono">
+            <kbd className="text-[10px] text-[var(--ws-text-muted)] bg-white px-1.5 py-0.5 rounded mr-2 border border-[var(--ws-border)]
+                           group-hover:text-indigo-600 group-hover:bg-indigo-50 group-hover:border-indigo-200 transition-colors font-mono">
               {i + 1}
             </kbd>
             <span className="text-[var(--ws-text-secondary)] group-hover:text-[var(--ws-text-primary)] transition-colors">
@@ -99,17 +99,17 @@ export default function ActionPanel() {
             onKeyDown={e => e.key === 'Enter' && handleAction(customAction)}
             placeholder="做点别的...（按 / 聚焦）"
             disabled={isProcessing}
-            className="flex-1 bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-2.5 text-sm
+            className="flex-1 bg-white border border-[var(--ws-border)] rounded-xl px-4 py-2.5 text-sm
                        text-[var(--ws-text-primary)] placeholder:text-[var(--ws-text-muted)]
-                       focus:outline-none focus:border-purple-500/40 transition-all
+                       focus:outline-none focus:border-indigo-400 transition-all
                        disabled:opacity-40"
           />
           <button
             onClick={() => handleAction(customAction)}
             disabled={!customAction.trim() || isProcessing}
             className="px-4 py-2.5 text-sm rounded-xl
-                       bg-purple-500/10 border border-purple-500/20 text-purple-300
-                       hover:bg-purple-500/20 hover:border-purple-500/30
+                       bg-indigo-50 border border-indigo-200 text-indigo-600
+                       hover:bg-indigo-100 hover:border-indigo-300
                        disabled:opacity-40 transition-all cursor-pointer"
           >
             ↵
@@ -123,9 +123,9 @@ export default function ActionPanel() {
       {isProcessing && (
         <div className="flex items-center justify-center gap-2 text-xs text-[var(--ws-text-muted)] py-3">
           <div className="flex gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
           <span>Agent 正在观察、反思、决策...</span>
         </div>
