@@ -1,5 +1,5 @@
 /**
- * WorldSim — Analytics Panel v3 (Light Theme)
+ * WorldSim — Analytics Panel v4 (Cyber Glass Dark Theme)
  */
 
 import { useMemo } from 'react'
@@ -61,10 +61,10 @@ export default function AnalyticsPanel() {
 
   return (
     <div className="ws-card rounded-2xl p-5 space-y-5">
-      <h3 className="text-sm font-medium text-[var(--ws-text-primary)] flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+      <h3 className="text-sm font-medium text-white/90 flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_6px_rgba(129,140,248,0.6)]" />
         会话分析
-        <span className="text-[10px] text-[var(--ws-text-muted)] font-normal">实时行为数据</span>
+        <span className="text-[10px] text-white/30 font-normal">实时行为数据</span>
       </h3>
 
       {/* Core metrics */}
@@ -77,27 +77,27 @@ export default function AnalyticsPanel() {
 
       {/* Agent relationships */}
       <div className="space-y-2">
-        <p className="text-[10px] text-[var(--ws-text-muted)] uppercase tracking-wider">角色关系</p>
+        <p className="text-[10px] text-white/30 uppercase tracking-wider">角色关系</p>
         {analytics.attitudeTimeline.map(agent => (
           <div key={agent.id} className="flex items-center gap-2 text-xs h-6">
             <div className="shrink-0 w-5 h-5">
               <AgentDot name={agent.name} agentId={agent.agentId} />
             </div>
-            <span className="shrink-0 w-12 truncate text-[var(--ws-text-secondary)]">{agent.name}</span>
-            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden relative min-w-0">
+            <span className="shrink-0 w-12 truncate text-white/60">{agent.name}</span>
+            <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden relative min-w-0">
               <div
                 className={`h-full transition-all duration-500 rounded-full ${
-                  agent.attitude > 0 ? 'bg-emerald-500' : agent.attitude < 0 ? 'bg-red-500' : 'bg-gray-400'
+                  agent.attitude > 0 ? 'bg-emerald-400' : agent.attitude < 0 ? 'bg-red-400' : 'bg-white/20'
                 }`}
                 style={{
                   width: `${Math.abs(agent.attitude) / 2}%`,
                   marginLeft: agent.attitude >= 0 ? '50%' : `${50 - Math.abs(agent.attitude) / 2}%`,
                 }}
               />
-              <div className="absolute inset-y-0 left-1/2 w-px bg-gray-300" />
+              <div className="absolute inset-y-0 left-1/2 w-px bg-white/10" />
             </div>
             <span className={`shrink-0 w-8 text-right font-mono text-[11px] ${
-              agent.attitude > 0 ? 'text-emerald-600' : agent.attitude < 0 ? 'text-red-500' : 'text-[var(--ws-text-muted)]'
+              agent.attitude > 0 ? 'text-emerald-400' : agent.attitude < 0 ? 'text-red-400' : 'text-white/30'
             }`}>
               {agent.attitude > 0 ? '+' : ''}{agent.attitude}
             </span>
@@ -107,12 +107,12 @@ export default function AnalyticsPanel() {
 
       {/* Decision patterns */}
       <div className="space-y-2">
-        <p className="text-[10px] text-[var(--ws-text-muted)] uppercase tracking-wider">决策模式</p>
+        <p className="text-[10px] text-white/30 uppercase tracking-wider">决策模式</p>
         <div className="flex gap-1.5 flex-wrap">
           {Object.entries(analytics.decisionTypes).map(([type, count]) => (
             <span
               key={type}
-              className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--ws-surface-alt)] border border-[var(--ws-border)] text-[var(--ws-text-secondary)]"
+              className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-white/50"
             >
               {getDecisionIcon(type)} {getDecisionLabel(type)}: {count as number}
             </span>
@@ -122,8 +122,8 @@ export default function AnalyticsPanel() {
 
       {/* API efficiency */}
       <div className="space-y-1">
-        <p className="text-[10px] text-[var(--ws-text-muted)] uppercase tracking-wider">API 效率</p>
-        <div className="flex gap-3 text-[10px] text-[var(--ws-text-muted)]">
+        <p className="text-[10px] text-white/30 uppercase tracking-wider">API 效率</p>
+        <div className="flex gap-3 text-[10px] text-white/30">
           <span>{'\u25B8'} 玩家行动: {analytics.actionCalls}</span>
           <span>{'\u25B8'} 智能体自主: {analytics.agentCalls}</span>
           <span>{'\u25B8'} 总 Token: {totalTokensUsed.toLocaleString()}</span>
@@ -132,7 +132,7 @@ export default function AnalyticsPanel() {
 
       {/* Heatmap */}
       <div className="space-y-1.5">
-        <p className="text-[10px] text-[var(--ws-text-muted)] uppercase tracking-wider">位置热力图</p>
+        <p className="text-[10px] text-white/30 uppercase tracking-wider">位置热力图</p>
         <div className="grid grid-cols-7 gap-px">
           {analytics.heatmap.flat().map((val, i) => (
             <div
@@ -140,8 +140,8 @@ export default function AnalyticsPanel() {
               className="w-3 h-3 rounded-sm"
               style={{
                 backgroundColor: val > 0
-                  ? `rgba(99, 102, 241, ${Math.min(val * 0.3, 1)})`
-                  : 'rgba(0, 0, 0, 0.03)',
+                  ? `rgba(129, 140, 248, ${Math.min(val * 0.3, 1)})`
+                  : 'rgba(255, 255, 255, 0.03)',
               }}
             />
           ))}
@@ -153,9 +153,9 @@ export default function AnalyticsPanel() {
 
 function MetricCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="text-center p-2.5 bg-[var(--ws-surface-alt)] rounded-xl border border-[var(--ws-border)]">
-      <div className="text-sm font-mono text-indigo-600">{value}</div>
-      <div className="text-[9px] text-[var(--ws-text-muted)] mt-0.5">{label}</div>
+    <div className="text-center p-2.5 bg-white/[0.03] rounded-xl border border-white/[0.06]">
+      <div className="text-sm font-mono text-indigo-300">{value}</div>
+      <div className="text-[9px] text-white/30 mt-0.5">{label}</div>
     </div>
   )
 }

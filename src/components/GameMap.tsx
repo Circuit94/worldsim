@@ -1,5 +1,5 @@
 /**
- * GameMap v5 (Light Theme)
+ * GameMap v6 (Cyber Glass Dark Theme)
  */
 
 import { useGameStore } from '../store/gameStore'
@@ -74,10 +74,10 @@ export default function GameMap() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse-slow" />
-          <span className="text-xs text-[var(--ws-text-secondary)]">{world.name}</span>
+          <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse-slow shadow-[0_0_6px_rgba(129,140,248,0.6)]" />
+          <span className="text-xs text-white/70">{world.name}</span>
         </div>
-        <span className="text-[10px] text-[var(--ws-text-muted)] font-mono">
+        <span className="text-[10px] text-white/30 font-mono">
           {player.steps}步 · {cols}x{world.dimensions[1]}
         </span>
       </div>
@@ -87,8 +87,11 @@ export default function GameMap() {
           ref={mapRef}
           className="relative rounded-2xl ws-card p-3 overflow-auto max-h-[420px] flex-1 min-w-0"
         >
+          {/* Map glow border effect */}
+          <div className="absolute inset-0 rounded-2xl pointer-events-none
+                          shadow-[inset_0_0_30px_rgba(99,102,241,0.05)]" />
           <div
-            className="grid gap-[2px] w-fit mx-auto"
+            className="grid gap-[2px] w-fit mx-auto relative z-10"
             style={{ gridTemplateColumns: `repeat(${cols}, 48px)` }}
           >
             {world.map.map((row, y) =>
@@ -101,7 +104,7 @@ export default function GameMap() {
                 const visible = d <= 2
                 const isHovered = hoveredTile?.x === x && hoveredTile?.y === y
 
-                const fogLevel = visible ? 0 : explored ? 0.3 : 0.75
+                const fogLevel = visible ? 0 : explored ? 0.4 : 0.85
 
                 const tileImgSrc = tile?.walkable === false
                   ? getUnwalkableImage()
@@ -113,8 +116,8 @@ export default function GameMap() {
                     className={`
                       relative w-[48px] h-[48px] rounded-lg overflow-hidden cursor-pointer select-none
                       transition-all duration-200
-                      ${isPlayer ? 'ring-2 ring-indigo-400 z-10 scale-105' :
-                        isHovered ? 'ring-1 ring-indigo-300 z-10 brightness-105' : ''}
+                      ${isPlayer ? 'ring-2 ring-indigo-400 z-10 scale-105 shadow-[0_0_12px_rgba(99,102,241,0.4)]' :
+                        isHovered ? 'ring-1 ring-indigo-400/50 z-10 brightness-110' : ''}
                     `}
                     onMouseEnter={() => setHoveredTile({ x, y })}
                     onMouseLeave={() => setHoveredTile(null)}
@@ -127,7 +130,7 @@ export default function GameMap() {
                     />
 
                     {visible && tile?.name && !entity && !isPlayer && (
-                      <div className="absolute bottom-0 left-0 right-0 px-0.5 py-px bg-black/50 backdrop-blur-sm">
+                      <div className="absolute bottom-0 left-0 right-0 px-0.5 py-px bg-black/60 backdrop-blur-sm">
                         <span className="text-[7px] text-white/80 leading-none block text-center truncate">
                           {tile.name}
                         </span>
@@ -145,7 +148,7 @@ export default function GameMap() {
                             className="w-10 h-10 rounded-full border-2 shadow-lg object-cover"
                             style={{
                               borderColor: visual.accentColor,
-                              boxShadow: `0 0 12px ${visual.accentColor}40`,
+                              boxShadow: `0 0 14px ${visual.accentColor}50`,
                               imageRendering: 'pixelated',
                             }}
                             draggable={false}
@@ -159,8 +162,8 @@ export default function GameMap() {
                       return (
                         <div className={`absolute inset-0 flex items-center justify-center z-10
                           transition-all duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}>
-                          <div className="w-7 h-7 rounded-lg bg-white/80 border border-gray-200
-                                         flex items-center justify-center animate-float shadow-sm">
+                          <div className="w-7 h-7 rounded-lg bg-white/10 border border-white/20 backdrop-blur-sm
+                                         flex items-center justify-center animate-float shadow-[0_0_8px_rgba(255,255,255,0.1)]">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill={icon.color}>
                               <path d={icon.path} />
                             </svg>
@@ -175,8 +178,8 @@ export default function GameMap() {
                         <img
                           src={getPlayerAvatarUrl()}
                           alt="玩家"
-                          className="w-10 h-10 rounded-full border-2 border-indigo-400 shadow-lg shadow-indigo-200/50 object-cover"
-                          style={{ imageRendering: 'pixelated' }}
+                          className="w-10 h-10 rounded-full border-2 border-indigo-400 shadow-lg object-cover"
+                          style={{ imageRendering: 'pixelated', boxShadow: '0 0 16px rgba(99,102,241,0.5)' }}
                           draggable={false}
                         />
                       </div>
@@ -184,7 +187,7 @@ export default function GameMap() {
 
                     {fogLevel > 0 && (
                       <div
-                        className="absolute inset-0 bg-[var(--ws-bg)] pointer-events-none transition-opacity duration-700"
+                        className="absolute inset-0 bg-[#0f0f1a] pointer-events-none transition-opacity duration-700"
                         style={{ opacity: fogLevel }}
                       />
                     )}
@@ -203,16 +206,16 @@ export default function GameMap() {
                 <img
                   src={getTileImage(hoverInfo.tile?.name || '', hoverInfo.tile?.description)}
                   alt=""
-                  className="w-6 h-6 rounded border border-[var(--ws-border)]"
+                  className="w-6 h-6 rounded border border-white/10"
                 />
-                <span className="text-xs text-[var(--ws-text-primary)] font-medium">{hoverInfo.tile?.name || '未知'}</span>
+                <span className="text-xs text-white/90 font-medium">{hoverInfo.tile?.name || '未知'}</span>
               </div>
               {hoverInfo.tile?.description && (
-                <p className="text-[10px] text-[var(--ws-text-muted)] leading-relaxed">{hoverInfo.tile.description}</p>
+                <p className="text-[10px] text-white/40 leading-relaxed">{hoverInfo.tile.description}</p>
               )}
-              <div className="text-[9px] text-[var(--ws-text-muted)] font-mono">({hoverInfo.x}, {hoverInfo.y})</div>
+              <div className="text-[9px] text-white/30 font-mono">({hoverInfo.x}, {hoverInfo.y})</div>
               {hoverInfo.isPlayer && (
-                <div className="text-[10px] text-indigo-600 flex items-center gap-1">
+                <div className="text-[10px] text-indigo-400 flex items-center gap-1">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a4 4 0 1 0 0 8 4 4 0 1 0 0-8z" /><path d="M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z" /></svg>
                   你在这里
                 </div>
@@ -220,7 +223,7 @@ export default function GameMap() {
               {hoverInfo.entity?.type === 'agent' && (() => {
                 const visual = getAgentVisual(hoverInfo.entity!.data.name, hoverInfo.entity!.data.id, hoverInfo.entity!.data.persona)
                 return (
-                  <div className="pt-2 border-t border-[var(--ws-border)] space-y-1">
+                  <div className="pt-2 border-t border-white/5 space-y-1">
                     <div className="flex items-center gap-1.5">
                       <img
                         src={visual.avatarUrl}
@@ -228,16 +231,16 @@ export default function GameMap() {
                         className="w-5 h-5 rounded-full border"
                         style={{ borderColor: visual.accentColor, imageRendering: 'pixelated' }}
                       />
-                      <span className="text-[11px] text-[var(--ws-text-primary)]">{hoverInfo.entity!.data.name}</span>
+                      <span className="text-[11px] text-white/80">{hoverInfo.entity!.data.name}</span>
                     </div>
                     <div className={`text-[10px] ${
-                      hoverInfo.entity!.data.memory.attitude > 20 ? 'text-emerald-600' :
-                      hoverInfo.entity!.data.memory.attitude < -20 ? 'text-red-500' : 'text-[var(--ws-text-secondary)]'
+                      hoverInfo.entity!.data.memory.attitude > 20 ? 'text-emerald-400' :
+                      hoverInfo.entity!.data.memory.attitude < -20 ? 'text-red-400' : 'text-white/50'
                     }`}>
                       态度 {hoverInfo.entity!.data.memory.attitude > 0 ? '+' : ''}{hoverInfo.entity!.data.memory.attitude}
                     </div>
                     {hoverInfo.entity!.data.memory.currentPlan && (
-                      <div className="text-[9px] text-[var(--ws-text-muted)]">
+                      <div className="text-[9px] text-white/30">
                         {'\u2192'} {hoverInfo.entity!.data.memory.currentPlan}
                       </div>
                     )}
@@ -247,28 +250,28 @@ export default function GameMap() {
               {hoverInfo.entity?.type === 'item' && (() => {
                 const icon = getItemIcon(hoverInfo.entity!.data.name, hoverInfo.entity!.data.description)
                 return (
-                  <div className="pt-2 border-t border-[var(--ws-border)]">
+                  <div className="pt-2 border-t border-white/5">
                     <div className="flex items-center gap-1.5">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill={icon.color}><path d={icon.path} /></svg>
                       <span className="text-[10px]" style={{ color: icon.color }}>{hoverInfo.entity!.data.name}</span>
                     </div>
-                    <p className="text-[9px] text-[var(--ws-text-muted)] mt-0.5">{hoverInfo.entity!.data.description}</p>
+                    <p className="text-[9px] text-white/30 mt-0.5">{hoverInfo.entity!.data.description}</p>
                   </div>
                 )
               })()}
             </div>
           ) : (
             <div className="ws-surface rounded-xl p-3">
-              <p className="text-[10px] text-[var(--ws-text-muted)] text-center">悬停查看地块详情</p>
+              <p className="text-[10px] text-white/30 text-center">悬停查看地块详情</p>
             </div>
           )}
 
           {/* Legend */}
           <div className="ws-surface rounded-xl p-3 space-y-2">
-            <div className="text-[9px] text-[var(--ws-text-muted)] uppercase tracking-wider mb-1">图例</div>
+            <div className="text-[9px] text-white/30 uppercase tracking-wider mb-1">图例</div>
             <div className="flex items-center gap-1.5">
-              <img src={getPlayerAvatarUrl()} alt="玩家" className="w-5 h-5 rounded-full border border-indigo-300" style={{ imageRendering: 'pixelated' }} />
-              <span className="text-[10px] text-[var(--ws-text-secondary)]">你</span>
+              <img src={getPlayerAvatarUrl()} alt="玩家" className="w-5 h-5 rounded-full border border-indigo-400/50" style={{ imageRendering: 'pixelated' }} />
+              <span className="text-[10px] text-white/60">你</span>
             </div>
             {world.agents.map(a => {
               const visual = getAgentVisual(a.name, a.id, a.persona)
@@ -280,16 +283,16 @@ export default function GameMap() {
                     className="w-5 h-5 rounded-full border"
                     style={{ borderColor: visual.accentColor, imageRendering: 'pixelated' }}
                   />
-                  <span className="text-[10px] text-[var(--ws-text-secondary)]">{a.name}</span>
+                  <span className="text-[10px] text-white/60">{a.name}</span>
                 </div>
               )
             })}
             {world.items.filter(i => !i.collected).length > 0 && (
               <div className="flex items-center gap-1.5">
-                <div className="w-4 h-4 rounded-md bg-white border border-gray-200 flex items-center justify-center shadow-sm">
-                  <svg width="8" height="8" viewBox="0 0 24 24" fill="#d97706"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" /></svg>
+                <div className="w-4 h-4 rounded-md bg-white/10 border border-white/20 flex items-center justify-center">
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="#fbbf24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" /></svg>
                 </div>
-                <span className="text-[10px] text-[var(--ws-text-secondary)]">物品</span>
+                <span className="text-[10px] text-white/60">物品</span>
               </div>
             )}
           </div>

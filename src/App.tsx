@@ -64,11 +64,17 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-6">
-          {/* Loading animation */}
-          <div className="relative w-16 h-16 mx-auto">
-            <div className="absolute inset-0 rounded-2xl bg-indigo-100 animate-pulse" />
-            <div className="absolute inset-0 rounded-2xl border border-indigo-200 flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round" className="animate-spin" style={{ animationDuration: '3s' }}>
+          {/* Loading orb with glow */}
+          <div className="relative w-20 h-20 mx-auto">
+            <div className="absolute inset-0 rounded-2xl bg-indigo-500/20 blur-xl animate-pulse" />
+            <div className="absolute inset-1 rounded-2xl bg-white/[0.03] border border-white/[0.1] backdrop-blur-sm flex items-center justify-center">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="url(#grad)" strokeWidth="1.5" strokeLinecap="round" className="animate-spin" style={{ animationDuration: '3s' }}>
+                <defs>
+                  <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#818cf8" />
+                    <stop offset="100%" stopColor="#06b6d4" />
+                  </linearGradient>
+                </defs>
                 {scenarioMode === 'game' 
                   ? <><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></>
                   : scenarioMode === 'training'
@@ -79,18 +85,18 @@ export default function App() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-[var(--ws-text-secondary)] text-sm">
+            <p className="text-white/60 text-sm">
               {scenarioMode === 'game' ? '正在生成世界模拟...' : 
                scenarioMode === 'training' ? '正在构建评估情景...' : 
                '正在部署仿真环境...'}
             </p>
-            <p className="text-[var(--ws-text-muted)] text-xs">通常需要 5-15 秒</p>
+            <p className="text-white/30 text-xs">通常需要 5-15 秒</p>
           </div>
 
           {/* Steps */}
           <div className="space-y-1.5">
             {loadingText.map((t, i) => (
-              <p key={i} className="text-[var(--ws-text-muted)] text-[11px] animate-fade-in-up" 
+              <p key={i} className="text-white/40 text-[11px] animate-fade-in-up" 
                  style={{ animationDelay: `${i * 200}ms`, opacity: 0 }}>
                 <span className="text-indigo-400 mr-1.5">{'\u25B8'}</span>{t}
               </p>
@@ -110,20 +116,20 @@ export default function App() {
       {/* Top bar */}
       <div className="max-w-6xl mx-auto mb-5">
         <div className="flex items-center justify-between">
-          <h1 className="text-sm font-mono text-[var(--ws-text-muted)]">
-            <span className="text-indigo-600 font-semibold">WorldSim</span>
-            <span className={`ml-2 text-[10px] px-2 py-0.5 rounded-full border ${
-              scenarioMode === 'game' ? 'text-indigo-600 border-indigo-200 bg-indigo-50' :
-              scenarioMode === 'training' ? 'text-amber-700 border-amber-200 bg-amber-50' :
-              'text-cyan-700 border-cyan-200 bg-cyan-50'
+          <h1 className="text-sm font-mono text-white/40">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400 font-semibold">WorldSim</span>
+            <span className={`ml-2 text-[10px] px-2 py-0.5 rounded-full border backdrop-blur-sm ${
+              scenarioMode === 'game' ? 'text-indigo-300 border-indigo-400/30 bg-indigo-500/10' :
+              scenarioMode === 'training' ? 'text-amber-300 border-amber-400/30 bg-amber-500/10' :
+              'text-cyan-300 border-cyan-400/30 bg-cyan-500/10'
             }`}>
               {scenarioMode === 'game' ? '探索' : scenarioMode === 'training' ? '情景评估' : '仿真'}
             </span>
-            <span className="text-[11px] text-[var(--ws-text-muted)] ml-3">{world?.name}</span>
+            <span className="text-[11px] text-white/30 ml-3">{world?.name}</span>
           </h1>
           <div className="flex items-center gap-2">
             {world && scenarioMode === 'game' && (
-              <span className="text-[10px] text-[var(--ws-text-muted)] font-mono hidden sm:inline">
+              <span className="text-[10px] text-white/20 font-mono hidden sm:inline">
                 种子:{world.seed.slice(0, 16)}
               </span>
             )}
@@ -132,8 +138,8 @@ export default function App() {
                 onClick={() => setShowAnalytics(!showAnalytics)}
                 className={`p-2 rounded-lg border transition-all cursor-pointer ${
                   showAnalytics 
-                    ? 'bg-indigo-50 border-indigo-200 text-indigo-600' 
-                    : 'bg-white border-[var(--ws-border)] text-[var(--ws-text-muted)] hover:border-indigo-200 hover:text-indigo-600'
+                    ? 'bg-indigo-500/15 border-indigo-400/30 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.15)]' 
+                    : 'bg-white/[0.03] border-white/[0.08] text-white/40 hover:border-indigo-400/30 hover:text-indigo-300'
                 }`}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/></svg>
@@ -141,8 +147,8 @@ export default function App() {
             )}
             <button
               onClick={() => useGameStore.getState().reset()}
-              className="p-2 rounded-lg bg-white border border-[var(--ws-border)]
-                         hover:border-red-200 text-[var(--ws-text-muted)] hover:text-red-500 transition-all cursor-pointer"
+              className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.08]
+                         hover:border-red-400/30 text-white/40 hover:text-red-400 transition-all cursor-pointer"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
@@ -172,51 +178,52 @@ export default function App() {
 
               {/* Agent info */}
               {world && world.agents.length > 0 && (
-                <div className="ws-card rounded-2xl p-5 space-y-3">
-                  <h3 className="text-xs font-medium text-[var(--ws-text-secondary)] uppercase tracking-wider">
-                    角色 <span className="text-[var(--ws-text-muted)]">({world.agents.length} 活跃)</span>
+                <div className="rounded-2xl p-5 space-y-3 bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
+                  <h3 className="text-xs font-medium text-white/50 uppercase tracking-wider">
+                    角色 <span className="text-white/30">({world.agents.length} 活跃)</span>
                   </h3>
                   <div className="space-y-2">
                     {world.agents.map(agent => (
                       <div
                         key={agent.id}
-                        className="p-3 bg-[var(--ws-surface-alt)] border border-[var(--ws-border)] rounded-xl text-xs"
+                        className="p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl text-xs
+                                   hover:border-white/[0.12] transition-colors"
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="flex items-center gap-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex items-center gap-2 min-w-0">
                             {(() => {
                               const visual = getAgentVisual(agent.name, agent.id)
                               return (
                                 <img
                                   src={visual.avatarUrl}
                                   alt={visual.initial}
-                                  className="w-5 h-5 rounded-full border object-cover"
+                                  className="w-5 h-5 rounded-full border object-cover flex-shrink-0"
                                   style={{ borderColor: visual.accentColor, imageRendering: 'pixelated' }}
                                 />
                               )
                             })()}
-                            <strong className="text-[var(--ws-text-primary)]">{agent.name}</strong>
+                            <strong className="text-white/80 truncate">{agent.name}</strong>
                           </span>
-                          <span className={`font-mono text-[11px] ${
-                            agent.memory.attitude > 20 ? 'text-emerald-600' :
-                            agent.memory.attitude < -20 ? 'text-red-500' :
-                            'text-[var(--ws-text-muted)]'
+                          <span className={`font-mono text-[11px] flex-shrink-0 ${
+                            agent.memory.attitude > 20 ? 'text-emerald-400' :
+                            agent.memory.attitude < -20 ? 'text-red-400' :
+                            'text-white/30'
                           }`}>
                             {agent.memory.attitude > 0 ? '+' : ''}{agent.memory.attitude}
                           </span>
                         </div>
                         {agent.memory.currentPlan && (
-                          <p className="text-indigo-500 mt-1.5 text-[10px]">
+                          <p className="text-indigo-300/80 mt-1.5 text-[10px]">
                             {'\u2192'} {agent.memory.currentPlan}
                           </p>
                         )}
                         {agent.memory.reflections.length > 0 && (
-                          <p className="text-sky-500 mt-1 text-[10px] italic">
+                          <p className="text-cyan-300/60 mt-1 text-[10px] italic">
                             {'\u25E6'} {agent.memory.reflections[agent.memory.reflections.length - 1]}
                           </p>
                         )}
                         {agent.memory.observations.length > 0 && (
-                          <p className="text-[var(--ws-text-muted)] mt-1 text-[10px]">
+                          <p className="text-white/30 mt-1 text-[10px]">
                             {'\u25B8'} {agent.memory.observations[agent.memory.observations.length - 1]?.content}
                           </p>
                         )}
