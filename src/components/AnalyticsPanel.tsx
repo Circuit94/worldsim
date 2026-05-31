@@ -1,10 +1,11 @@
 /**
- * WorldSim — Analytics Panel v4 (Cyber Glass Dark Theme)
+ * WorldSim — Analytics Panel v5 (Cyber Glass Dark + Lucide Icons + Contrast)
  */
 
 import { useMemo } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { getAgentVisual } from '../engine/tileVisuals'
+import { MessageCircle, Search, Navigation, Swords, Hand, Pause, HelpCircle, Activity, Play, Bot, Coins } from 'lucide-react'
 
 export default function AnalyticsPanel() {
   const { world, player, narrativeLog, debugLogs, totalTokensUsed } = useGameStore()
@@ -62,13 +63,13 @@ export default function AnalyticsPanel() {
   return (
     <div className="ws-card rounded-2xl p-5 space-y-5">
       <h3 className="text-sm font-medium text-white/90 flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_6px_rgba(129,140,248,0.6)]" />
+        <Activity size={14} className="text-indigo-400" />
         会话分析
-        <span className="text-[10px] text-white/30 font-normal">实时行为数据</span>
+        <span className="text-[10px] text-white/40 font-normal">实时行为数据</span>
       </h3>
 
       {/* Core metrics */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <MetricCard label="行动次数" value={analytics.totalActions} />
         <MetricCard label="平均延迟" value={`${analytics.avgLatency}ms`} />
         <MetricCard label="Token/次" value={analytics.avgTokensPerAction} />
@@ -77,14 +78,21 @@ export default function AnalyticsPanel() {
 
       {/* Agent relationships */}
       <div className="space-y-2">
-        <p className="text-[10px] text-white/30 uppercase tracking-wider">角色关系</p>
+        <p className="text-[10px] text-white/40 uppercase tracking-wider">角色关系</p>
         {analytics.attitudeTimeline.map(agent => (
           <div key={agent.id} className="flex items-center gap-2 text-xs h-6">
             <div className="shrink-0 w-5 h-5">
               <AgentDot name={agent.name} agentId={agent.agentId} />
             </div>
-            <span className="shrink-0 w-12 truncate text-white/60">{agent.name}</span>
-            <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden relative min-w-0">
+            <span className="shrink-0 w-12 truncate text-white/70">{agent.name}</span>
+            <div
+              className="flex-1 h-1.5 bg-white/[0.06] rounded-full overflow-hidden relative min-w-0"
+              role="progressbar"
+              aria-valuenow={agent.attitude}
+              aria-valuemin={-100}
+              aria-valuemax={100}
+              aria-label={`${agent.name} 态度 ${agent.attitude}`}
+            >
               <div
                 className={`h-full transition-all duration-500 rounded-full ${
                   agent.attitude > 0 ? 'bg-emerald-400' : agent.attitude < 0 ? 'bg-red-400' : 'bg-white/20'
@@ -97,7 +105,7 @@ export default function AnalyticsPanel() {
               <div className="absolute inset-y-0 left-1/2 w-px bg-white/10" />
             </div>
             <span className={`shrink-0 w-8 text-right font-mono text-[11px] ${
-              agent.attitude > 0 ? 'text-emerald-400' : agent.attitude < 0 ? 'text-red-400' : 'text-white/30'
+              agent.attitude > 0 ? 'text-emerald-400' : agent.attitude < 0 ? 'text-red-400' : 'text-white/40'
             }`}>
               {agent.attitude > 0 ? '+' : ''}{agent.attitude}
             </span>
@@ -107,33 +115,40 @@ export default function AnalyticsPanel() {
 
       {/* Decision patterns */}
       <div className="space-y-2">
-        <p className="text-[10px] text-white/30 uppercase tracking-wider">决策模式</p>
+        <p className="text-[10px] text-white/40 uppercase tracking-wider">决策模式</p>
         <div className="flex gap-1.5 flex-wrap">
           {Object.entries(analytics.decisionTypes).map(([type, count]) => (
             <span
               key={type}
-              className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-white/50"
+              className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.10] text-white/60 flex items-center gap-1"
             >
-              {getDecisionIcon(type)} {getDecisionLabel(type)}: {count as number}
+              {getDecisionIconComponent(type)}
+              {getDecisionLabel(type)}: {count as number}
             </span>
           ))}
         </div>
       </div>
 
       {/* API efficiency */}
-      <div className="space-y-1">
-        <p className="text-[10px] text-white/30 uppercase tracking-wider">API 效率</p>
-        <div className="flex gap-3 text-[10px] text-white/30">
-          <span>{'\u25B8'} 玩家行动: {analytics.actionCalls}</span>
-          <span>{'\u25B8'} 智能体自主: {analytics.agentCalls}</span>
-          <span>{'\u25B8'} 总 Token: {totalTokensUsed.toLocaleString()}</span>
+      <div className="space-y-1.5">
+        <p className="text-[10px] text-white/40 uppercase tracking-wider">API 效率</p>
+        <div className="flex flex-wrap gap-3 text-[10px] text-white/50">
+          <span className="flex items-center gap-1">
+            <Play size={8} className="text-white/40" /> 玩家行动: {analytics.actionCalls}
+          </span>
+          <span className="flex items-center gap-1">
+            <Bot size={8} className="text-white/40" /> 智能体自主: {analytics.agentCalls}
+          </span>
+          <span className="flex items-center gap-1">
+            <Coins size={8} className="text-white/40" /> 总 Token: {totalTokensUsed.toLocaleString()}
+          </span>
         </div>
       </div>
 
       {/* Heatmap */}
       <div className="space-y-1.5">
-        <p className="text-[10px] text-white/30 uppercase tracking-wider">位置热力图</p>
-        <div className="grid grid-cols-7 gap-px">
+        <p className="text-[10px] text-white/40 uppercase tracking-wider">位置热力图</p>
+        <div className="grid grid-cols-7 gap-px w-fit" role="img" aria-label="玩家位置热力图">
           {analytics.heatmap.flat().map((val, i) => (
             <div
               key={i}
@@ -141,7 +156,7 @@ export default function AnalyticsPanel() {
               style={{
                 backgroundColor: val > 0
                   ? `rgba(129, 140, 248, ${Math.min(val * 0.3, 1)})`
-                  : 'rgba(255, 255, 255, 0.03)',
+                  : 'rgba(255, 255, 255, 0.04)',
               }}
             />
           ))}
@@ -153,9 +168,9 @@ export default function AnalyticsPanel() {
 
 function MetricCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="text-center p-2.5 bg-white/[0.03] rounded-xl border border-white/[0.06]">
+    <div className="text-center p-2.5 bg-white/[0.04] rounded-xl border border-white/[0.08]">
       <div className="text-sm font-mono text-indigo-300">{value}</div>
-      <div className="text-[9px] text-white/30 mt-0.5">{label}</div>
+      <div className="text-[9px] text-white/40 mt-0.5">{label}</div>
     </div>
   )
 }
@@ -167,17 +182,17 @@ function categorizeDecisions(actions: string[]): Record<string, number> {
     const lower = action.toLowerCase()
     let type = 'other'
     
-    if (lower.includes('talk') || lower.includes('ask') || lower.includes('say') || lower.includes('speak') || lower.includes('\u4EA4\u8C08') || lower.includes('\u95EE') || lower.includes('\u8BF4') || lower.includes('\u5BF9\u8BDD')) {
+    if (lower.includes('talk') || lower.includes('ask') || lower.includes('say') || lower.includes('speak') || lower.includes('交谈') || lower.includes('问') || lower.includes('说') || lower.includes('对话')) {
       type = 'social'
-    } else if (lower.includes('look') || lower.includes('examine') || lower.includes('search') || lower.includes('inspect') || lower.includes('\u67E5\u770B') || lower.includes('\u89C2\u5BDF') || lower.includes('\u641C\u7D22') || lower.includes('\u68C0\u67E5')) {
+    } else if (lower.includes('look') || lower.includes('examine') || lower.includes('search') || lower.includes('inspect') || lower.includes('查看') || lower.includes('观察') || lower.includes('搜索') || lower.includes('检查')) {
       type = 'explore'
-    } else if (lower.includes('move') || lower.includes('go') || lower.includes('walk') || lower.includes('enter') || lower.includes('\u524D\u5F80') || lower.includes('\u8D70') || lower.includes('\u8FDB\u5165') || lower.includes('\u79FB\u52A8')) {
+    } else if (lower.includes('move') || lower.includes('go') || lower.includes('walk') || lower.includes('enter') || lower.includes('前往') || lower.includes('走') || lower.includes('进入') || lower.includes('移动')) {
       type = 'navigate'
-    } else if (lower.includes('attack') || lower.includes('fight') || lower.includes('hit') || lower.includes('defend') || lower.includes('\u653B\u51FB') || lower.includes('\u6253') || lower.includes('\u6218\u6597') || lower.includes('\u9632\u5FA1')) {
+    } else if (lower.includes('attack') || lower.includes('fight') || lower.includes('hit') || lower.includes('defend') || lower.includes('攻击') || lower.includes('打') || lower.includes('战斗') || lower.includes('防御')) {
       type = 'combat'
-    } else if (lower.includes('take') || lower.includes('grab') || lower.includes('pick') || lower.includes('use') || lower.includes('\u62FF') || lower.includes('\u6361') || lower.includes('\u4F7F\u7528') || lower.includes('\u62FE\u53D6')) {
+    } else if (lower.includes('take') || lower.includes('grab') || lower.includes('pick') || lower.includes('use') || lower.includes('拿') || lower.includes('捡') || lower.includes('使用') || lower.includes('拾取')) {
       type = 'interact'
-    } else if (lower.includes('wait') || lower.includes('rest') || lower.includes('hide') || lower.includes('\u7B49\u5F85') || lower.includes('\u4F11\u606F') || lower.includes('\u8E72\u85CF')) {
+    } else if (lower.includes('wait') || lower.includes('rest') || lower.includes('hide') || lower.includes('等待') || lower.includes('休息') || lower.includes('蹲藏')) {
       type = 'passive'
     }
 
@@ -199,16 +214,23 @@ function AgentDot({ name, agentId }: { name: string; agentId: string }) {
   )
 }
 
-function getDecisionIcon(type: string): string {
-  const icons: Record<string, string> = {
-    social: '\u25C7', explore: '\u25CB', navigate: '\u2192', combat: '\u00D7', interact: '\u25A1', passive: '\u00B7', other: '?',
+function getDecisionIconComponent(type: string) {
+  const size = 10
+  const cls = "text-white/40"
+  switch (type) {
+    case 'social': return <MessageCircle size={size} className={cls} />
+    case 'explore': return <Search size={size} className={cls} />
+    case 'navigate': return <Navigation size={size} className={cls} />
+    case 'combat': return <Swords size={size} className={cls} />
+    case 'interact': return <Hand size={size} className={cls} />
+    case 'passive': return <Pause size={size} className={cls} />
+    default: return <HelpCircle size={size} className={cls} />
   }
-  return icons[type] || '?'
 }
 
 function getDecisionLabel(type: string): string {
   const labels: Record<string, string> = {
-    social: '\u793E\u4EA4', explore: '\u63A2\u7D22', navigate: '\u79FB\u52A8', combat: '\u6218\u6597', interact: '\u4EA4\u4E92', passive: '\u7B49\u5F85', other: '\u5176\u4ED6',
+    social: '社交', explore: '探索', navigate: '移动', combat: '战斗', interact: '交互', passive: '等待', other: '其他',
   }
-  return labels[type] || '\u5176\u4ED6'
+  return labels[type] || '其他'
 }

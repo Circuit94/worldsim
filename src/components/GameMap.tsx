@@ -1,10 +1,11 @@
 /**
- * GameMap v6 (Cyber Glass Dark Theme)
+ * GameMap v7 (Cyber Glass Dark Theme + Accessibility + Responsive)
  */
 
 import { useGameStore } from '../store/gameStore'
 import { useMemo, useRef, useEffect, useState } from 'react'
 import { getTileImage, getUnwalkableImage, getAgentVisual, getPlayerAvatarUrl, getItemIcon } from '../engine/tileVisuals'
+import { User, ArrowRight } from 'lucide-react'
 
 function dist(a: [number, number], b: [number, number]) {
   return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1])
@@ -18,14 +19,16 @@ export function resetExploredSet() {
 
 export default function GameMap() {
   const { world, player } = useGameStore()
+  const mapRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [hoveredTile, setHoveredTile] = useState<{ x: number; y: number } | null>(null)
+  const [tileSize, setTileSize] = useState(48)
 
   useEffect(() => {
     if (!world) {
       exploredSet = new Set<string>()
     }
   }, [world])
-  const mapRef = useRef<HTMLDivElement>(null)
-  const [hoveredTile, setHoveredTile] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     if (!player) return
@@ -45,6 +48,22 @@ export default function GameMap() {
       el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
     }
   }, [player?.position])
+
+  // Responsive tile sizing
+  useEffect(() => {
+    if (!containerRef.current || !world) return
+    const observer = new ResizeObserver(entries => {
+      const width = entries[0]?.contentRect.width ?? 320
+      const [cols] = world.dimensions
+      const padding = 24 // p-3 * 2
+      const gaps = (cols - 1) * 2
+      const available = width - padding - gaps
+      const computed = Math.floor(available / cols)
+      setTileSize(Math.max(32, Math.min(48, computed)))
+    })
+    observer.observe(containerRef.current)
+    return () => observer.disconnect()
+  }, [world?.dimensions])
 
   if (!world || !player) return null
 
@@ -77,22 +96,25 @@ export default function GameMap() {
           <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse-slow shadow-[0_0_6px_rgba(129,140,248,0.6)]" />
           <span className="text-xs text-white/70">{world.name}</span>
         </div>
-        <span className="text-[10px] text-white/30 font-mono">
+        <span className="text-[10px] text-white/40 font-mono">
           {player.steps}步 · {cols}x{world.dimensions[1]}
         </span>
       </div>
 
       <div className="flex gap-4 flex-col sm:flex-row">
         <div
-          ref={mapRef}
+          ref={containerRef}
           className="relative rounded-2xl ws-card p-3 overflow-auto max-h-[420px] flex-1 min-w-0"
         >
           {/* Map glow border effect */}
           <div className="absolute inset-0 rounded-2xl pointer-events-none
                           shadow-[inset_0_0_30px_rgba(99,102,241,0.05)]" />
           <div
+            ref={mapRef}
             className="grid gap-[2px] w-fit mx-auto relative z-10"
-            style={{ gridTemplateColumns: `repeat(${cols}, 48px)` }}
+            style={{ gridTemplateColumns: `repeat(${cols}, ${tileSize}px)` }}
+            role="grid"
+            aria-label={`${world.name} 地图，${cols}x${world.dimensions[1]} 格`}
           >
             {world.map.map((row, y) =>
               row.map((tileId, x) => {
@@ -113,12 +135,15 @@ export default function GameMap() {
                 return (
                   <div
                     key={`${x}-${y}`}
+                    role="gridcell"
+                    aria-label={`${tile?.name || '未知'} (${x},${y})${isPlayer ? ' - 你在这里' : ''}${entity?.type === 'agent' ? ` - ${entity.data.name}` : ''}`}
                     className={`
-                      relative w-[48px] h-[48px] rounded-lg overflow-hidden cursor-pointer select-none
-                      transition-all duration-200
+                      relative rounded-lg overflow-hidden cursor-pointer select-none
+                      transition-[transform,box-shadow,ring-color] duration-200
                       ${isPlayer ? 'ring-2 ring-indigo-400 z-10 scale-105 shadow-[0_0_12px_rgba(99,102,241,0.4)]' :
                         isHovered ? 'ring-1 ring-indigo-400/50 z-10 brightness-110' : ''}
                     `}
+                    style={{ width: tileSize, height: tileSize }}
                     onMouseEnter={() => setHoveredTile({ x, y })}
                     onMouseLeave={() => setHoveredTile(null)}
                   >
@@ -141,7 +166,7 @@ export default function GameMap() {
                       const visual = getAgentVisual(entity.data.name, entity.data.id, entity.data.persona)
                       return (
                         <div className={`absolute inset-0 flex items-center justify-center z-10 
-                          transition-all duration-500 ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
+                          transition-[opacity,transform] duration-500 ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
                           <img
                             src={visual.avatarUrl}
                             alt={entity.data.name}
@@ -150,6 +175,8 @@ export default function GameMap() {
                               borderColor: visual.accentColor,
                               boxShadow: `0 0 14px ${visual.accentColor}50`,
                               imageRendering: 'pixelated',
+                              width: Math.min(tileSize - 8, 40),
+                              height: Math.min(tileSize - 8, 40),
                             }}
                             draggable={false}
                           />
@@ -161,7 +188,7 @@ export default function GameMap() {
                       const icon = getItemIcon(entity.data.name, entity.data.description)
                       return (
                         <div className={`absolute inset-0 flex items-center justify-center z-10
-                          transition-all duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}>
+                          transition-[opacity] duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}>
                           <div className="w-7 h-7 rounded-lg bg-white/10 border border-white/20 backdrop-blur-sm
                                          flex items-center justify-center animate-float shadow-[0_0_8px_rgba(255,255,255,0.1)]">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill={icon.color}>
@@ -178,8 +205,13 @@ export default function GameMap() {
                         <img
                           src={getPlayerAvatarUrl()}
                           alt="玩家"
-                          className="w-10 h-10 rounded-full border-2 border-indigo-400 shadow-lg object-cover"
-                          style={{ imageRendering: 'pixelated', boxShadow: '0 0 16px rgba(99,102,241,0.5)' }}
+                          className="rounded-full border-2 border-indigo-400 shadow-lg object-cover"
+                          style={{
+                            imageRendering: 'pixelated',
+                            boxShadow: '0 0 16px rgba(99,102,241,0.5)',
+                            width: Math.min(tileSize - 8, 40),
+                            height: Math.min(tileSize - 8, 40),
+                          }}
                           draggable={false}
                         />
                       </div>
@@ -201,7 +233,7 @@ export default function GameMap() {
         {/* Hover detail panel */}
         <div className="w-full sm:w-44 shrink-0 space-y-3">
           {hoverInfo ? (
-            <div className="ws-card rounded-xl p-3 space-y-2">
+            <div className="ws-card rounded-xl p-3 space-y-2 animate-slide-in">
               <div className="flex items-center gap-2">
                 <img
                   src={getTileImage(hoverInfo.tile?.name || '', hoverInfo.tile?.description)}
@@ -211,12 +243,12 @@ export default function GameMap() {
                 <span className="text-xs text-white/90 font-medium">{hoverInfo.tile?.name || '未知'}</span>
               </div>
               {hoverInfo.tile?.description && (
-                <p className="text-[10px] text-white/40 leading-relaxed">{hoverInfo.tile.description}</p>
+                <p className="text-[10px] text-white/50 leading-relaxed">{hoverInfo.tile.description}</p>
               )}
-              <div className="text-[9px] text-white/30 font-mono">({hoverInfo.x}, {hoverInfo.y})</div>
+              <div className="text-[9px] text-white/40 font-mono">({hoverInfo.x}, {hoverInfo.y})</div>
               {hoverInfo.isPlayer && (
                 <div className="text-[10px] text-indigo-400 flex items-center gap-1">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a4 4 0 1 0 0 8 4 4 0 1 0 0-8z" /><path d="M12 14c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z" /></svg>
+                  <User size={10} />
                   你在这里
                 </div>
               )}
@@ -240,8 +272,9 @@ export default function GameMap() {
                       态度 {hoverInfo.entity!.data.memory.attitude > 0 ? '+' : ''}{hoverInfo.entity!.data.memory.attitude}
                     </div>
                     {hoverInfo.entity!.data.memory.currentPlan && (
-                      <div className="text-[9px] text-white/30">
-                        {'\u2192'} {hoverInfo.entity!.data.memory.currentPlan}
+                      <div className="text-[9px] text-white/40 flex items-center gap-1">
+                        <ArrowRight size={8} />
+                        {hoverInfo.entity!.data.memory.currentPlan}
                       </div>
                     )}
                   </div>
@@ -255,20 +288,20 @@ export default function GameMap() {
                       <svg width="12" height="12" viewBox="0 0 24 24" fill={icon.color}><path d={icon.path} /></svg>
                       <span className="text-[10px]" style={{ color: icon.color }}>{hoverInfo.entity!.data.name}</span>
                     </div>
-                    <p className="text-[9px] text-white/30 mt-0.5">{hoverInfo.entity!.data.description}</p>
+                    <p className="text-[9px] text-white/40 mt-0.5">{hoverInfo.entity!.data.description}</p>
                   </div>
                 )
               })()}
             </div>
           ) : (
             <div className="ws-surface rounded-xl p-3">
-              <p className="text-[10px] text-white/30 text-center">悬停查看地块详情</p>
+              <p className="text-[10px] text-white/40 text-center">悬停查看地块详情</p>
             </div>
           )}
 
           {/* Legend */}
           <div className="ws-surface rounded-xl p-3 space-y-2">
-            <div className="text-[9px] text-white/30 uppercase tracking-wider mb-1">图例</div>
+            <div className="text-[9px] text-white/40 uppercase tracking-wider mb-1">图例</div>
             <div className="flex items-center gap-1.5">
               <img src={getPlayerAvatarUrl()} alt="玩家" className="w-5 h-5 rounded-full border border-indigo-400/50" style={{ imageRendering: 'pixelated' }} />
               <span className="text-[10px] text-white/60">你</span>

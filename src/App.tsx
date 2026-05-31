@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useGameStore } from './store/gameStore'
 import { getAgentVisual } from './engine/tileVisuals'
 import { loadAutoSave, getStoredApiKey } from './engine/persistence'
+import { BarChart3, X, ArrowRight, CircleDot, Eye } from 'lucide-react'
 import LandingHero from './components/LandingHero'
 import WorldInput from './components/WorldInput'
 import GameMap from './components/GameMap'
@@ -17,6 +18,14 @@ export default function App() {
   const { phase, world, scenarioMode } = useGameStore()
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [showLanding, setShowLanding] = useState(true)
+  const [phaseReady, setPhaseReady] = useState(false)
+
+  // Phase transition animation
+  useEffect(() => {
+    setPhaseReady(false)
+    const t = requestAnimationFrame(() => setPhaseReady(true))
+    return () => cancelAnimationFrame(t)
+  }, [phase, showLanding])
 
   if (phase === 'setup' && showLanding) {
     return <LandingHero onEnter={(resumeAutoSave) => {
@@ -48,7 +57,7 @@ export default function App() {
 
   if (phase === 'setup') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className={`min-h-screen flex items-center justify-center p-4 phase-enter ${phaseReady ? 'phase-enter-active' : ''}`}>
         <WorldInput />
       </div>
     )
@@ -62,7 +71,7 @@ export default function App() {
       : ['部署多智能体仿真环境', '配置行为模型参数', '初始化交互规则', '启动自主推演引擎']
 
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className={`min-h-screen flex items-center justify-center phase-enter ${phaseReady ? 'phase-enter-active' : ''}`}>
         <div className="text-center space-y-6">
           {/* Loading orb with glow */}
           <div className="relative w-20 h-20 mx-auto">
@@ -85,20 +94,20 @@ export default function App() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-white/60 text-sm">
+            <p className="text-white/70 text-sm">
               {scenarioMode === 'game' ? '正在生成世界模拟...' : 
                scenarioMode === 'training' ? '正在构建评估情景...' : 
                '正在部署仿真环境...'}
             </p>
-            <p className="text-white/30 text-xs">通常需要 5-15 秒</p>
+            <p className="text-white/40 text-xs">通常需要 5-15 秒</p>
           </div>
 
           {/* Steps */}
           <div className="space-y-1.5">
             {loadingText.map((t, i) => (
-              <p key={i} className="text-white/40 text-[11px] animate-fade-in-up" 
+              <p key={i} className="text-white/50 text-[11px] animate-fade-in-up" 
                  style={{ animationDelay: `${i * 200}ms`, opacity: 0 }}>
-                <span className="text-indigo-400 mr-1.5">{'\u25B8'}</span>{t}
+                <ArrowRight size={9} className="inline mr-1.5 text-indigo-400" />{t}
               </p>
             ))}
           </div>
@@ -112,7 +121,7 @@ export default function App() {
   // ============================================================
 
   return (
-    <div className="min-h-screen p-4 sm:p-6">
+    <div className={`min-h-screen p-4 sm:p-6 phase-enter ${phaseReady ? 'phase-enter-active' : ''}`}>
       {/* Top bar */}
       <div className="max-w-6xl mx-auto mb-5">
         <div className="flex items-center justify-between">
@@ -125,11 +134,11 @@ export default function App() {
             }`}>
               {scenarioMode === 'game' ? '探索' : scenarioMode === 'training' ? '情景评估' : '仿真'}
             </span>
-            <span className="text-[11px] text-white/30 ml-3">{world?.name}</span>
+            <span className="text-[11px] text-white/40 ml-3">{world?.name}</span>
           </h1>
           <div className="flex items-center gap-2">
             {world && scenarioMode === 'game' && (
-              <span className="text-[10px] text-white/20 font-mono hidden sm:inline">
+              <span className="text-[10px] text-white/30 font-mono hidden sm:inline">
                 种子:{world.seed.slice(0, 16)}
               </span>
             )}
@@ -139,18 +148,21 @@ export default function App() {
                 className={`p-2 rounded-lg border transition-all cursor-pointer ${
                   showAnalytics 
                     ? 'bg-indigo-500/15 border-indigo-400/30 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.15)]' 
-                    : 'bg-white/[0.03] border-white/[0.08] text-white/40 hover:border-indigo-400/30 hover:text-indigo-300'
+                    : 'bg-white/[0.03] border-white/[0.08] text-white/50 hover:border-indigo-400/30 hover:text-indigo-300'
                 }`}
+                aria-label={showAnalytics ? '隐藏分析面板' : '显示分析面板'}
+                aria-pressed={showAnalytics}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/></svg>
+                <BarChart3 size={14} />
               </button>
             )}
             <button
               onClick={() => useGameStore.getState().reset()}
               className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.08]
-                         hover:border-red-400/30 text-white/40 hover:text-red-400 transition-all cursor-pointer"
+                         hover:border-red-400/30 text-white/50 hover:text-red-400 transition-all cursor-pointer"
+              aria-label="结束当前会话"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              <X size={14} />
             </button>
           </div>
         </div>
@@ -179,8 +191,8 @@ export default function App() {
               {/* Agent info */}
               {world && world.agents.length > 0 && (
                 <div className="rounded-2xl p-5 space-y-3 bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
-                  <h3 className="text-xs font-medium text-white/50 uppercase tracking-wider">
-                    角色 <span className="text-white/30">({world.agents.length} 活跃)</span>
+                  <h3 className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                    角色 <span className="text-white/40">({world.agents.length} 活跃)</span>
                   </h3>
                   <div className="space-y-2">
                     {world.agents.map(agent => (
@@ -196,7 +208,7 @@ export default function App() {
                               return (
                                 <img
                                   src={visual.avatarUrl}
-                                  alt={visual.initial}
+                                  alt={agent.name}
                                   className="w-5 h-5 rounded-full border object-cover flex-shrink-0"
                                   style={{ borderColor: visual.accentColor, imageRendering: 'pixelated' }}
                                 />
@@ -207,24 +219,24 @@ export default function App() {
                           <span className={`font-mono text-[11px] flex-shrink-0 ${
                             agent.memory.attitude > 20 ? 'text-emerald-400' :
                             agent.memory.attitude < -20 ? 'text-red-400' :
-                            'text-white/30'
+                            'text-white/40'
                           }`}>
                             {agent.memory.attitude > 0 ? '+' : ''}{agent.memory.attitude}
                           </span>
                         </div>
                         {agent.memory.currentPlan && (
-                          <p className="text-indigo-300/80 mt-1.5 text-[10px]">
-                            {'\u2192'} {agent.memory.currentPlan}
+                          <p className="text-indigo-300/80 mt-1.5 text-[10px] flex items-center gap-1">
+                            <ArrowRight size={8} /> {agent.memory.currentPlan}
                           </p>
                         )}
                         {agent.memory.reflections.length > 0 && (
-                          <p className="text-cyan-300/60 mt-1 text-[10px] italic">
-                            {'\u25E6'} {agent.memory.reflections[agent.memory.reflections.length - 1]}
+                          <p className="text-cyan-300/60 mt-1 text-[10px] italic flex items-center gap-1">
+                            <CircleDot size={8} /> {agent.memory.reflections[agent.memory.reflections.length - 1]}
                           </p>
                         )}
                         {agent.memory.observations.length > 0 && (
-                          <p className="text-white/30 mt-1 text-[10px]">
-                            {'\u25B8'} {agent.memory.observations[agent.memory.observations.length - 1]?.content}
+                          <p className="text-white/40 mt-1 text-[10px] flex items-center gap-1">
+                            <Eye size={8} /> {agent.memory.observations[agent.memory.observations.length - 1]?.content}
                           </p>
                         )}
                       </div>

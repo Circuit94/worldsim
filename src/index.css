@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ============================================================
- * WorldSim — Design System v4 (Cyber Glass Dark Theme)
+ * WorldSim — Design System v5 (Cyber Glass Dark Theme)
  * 深色渐变 · 毛玻璃 · 极光流光 · 高级质感
  * ============================================================ */
 
@@ -139,6 +139,18 @@ body::after {
   box-shadow: 0 0 16px rgba(99, 102, 241, 0.1);
 }
 
+/* ===== 全局交互反馈 ===== */
+button:not(:disabled) {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ws-bg), 0 0 0 4px rgba(99, 102, 241, 0.5);
+}
+
 /* ===== 动画 ===== */
 @keyframes sway {
   0%, 100% { transform: rotate(0deg) translateX(0); }
@@ -183,14 +195,9 @@ body::after {
   0%, 100% { box-shadow: 0 0 12px rgba(99, 102, 241, 0.2); }
   50% { box-shadow: 0 0 24px rgba(99, 102, 241, 0.4); }
 }
-@keyframes border-glow {
-  0%, 100% { border-color: rgba(99, 102, 241, 0.3); }
-  50% { border-color: rgba(168, 85, 247, 0.5); }
-}
-@keyframes energy-flow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+@keyframes slide-in {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 @utility animate-sway {
@@ -223,12 +230,20 @@ body::after {
 @utility animate-glow-pulse {
   animation: glow-pulse 3s ease-in-out infinite;
 }
-@utility animate-border-glow {
-  animation: border-glow 4s ease-in-out infinite;
+@utility animate-slide-in {
+  animation: slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
-@utility animate-energy-flow {
-  animation: energy-flow 8s ease-in-out infinite;
-  background-size: 200% 200%;
+
+/* ===== Reduced Motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  body::before {
+    animation: none;
+  }
 }
 
 /* ===== 滚动条 ===== */
@@ -277,4 +292,9 @@ a {
 }
 a:hover {
   color: #c4b5fd;
+}
+
+/* ===== Phase Transition ===== */
+.phase-enter {
+  animation: fade-in-up 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
