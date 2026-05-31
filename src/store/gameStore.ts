@@ -91,6 +91,9 @@ interface GameState {
   // Token tracking
   totalTokensUsed: number
   
+  // Runtime config (editable during play)
+  runtimeConfig: WorldConfig
+
   // Actions
   setApiKey: (key: string, model?: GeminiModel) => void
   startGame: (theme: string, mode?: ScenarioMode, worldConfig?: WorldConfig) => Promise<void>
@@ -98,6 +101,12 @@ interface GameState {
   toggleDebug: () => void
   exportSession: () => SessionData | null
   reset: () => void
+
+  // Runtime editing actions
+  updateAgent: (agentId: string, updates: Partial<{ persona: string; goals: string[]; decisionStyle: string; attitude: number }>) => void
+  addRule: (trigger: string, effect: string) => void
+  removeRule: (ruleIndex: number) => void
+  updateRuntimeConfig: (updates: Partial<WorldConfig>) => void
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -112,6 +121,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   showDebug: false,
   scenarioMode: 'game',
   totalTokensUsed: 0,
+  runtimeConfig: { ...DEFAULT_WORLD_CONFIG },
 
   setApiKey: (key: string, model?: GeminiModel) => {
     initGemini(key, model)
@@ -121,7 +131,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   startGame: async (theme: string, mode: ScenarioMode = 'game', worldConfig?: WorldConfig) => {
     const config = getScenarioConfig(mode)
     const finalWorldConfig = worldConfig || DEFAULT_WORLD_CONFIG
-    set({ phase: 'generating', error: null, isProcessing: true, scenarioMode: mode })
+    set({ phase: 'generating', error: null, isProcessing: true, scenarioMode: mode, runtimeConfig: finalWorldConfig })
 
     try {
       const { world, debug } = await generateWorld(theme, undefined, config.worldGenModifier || undefined, finalWorldConfig)
@@ -309,5 +319,48 @@ export const useGameStore = create<GameState>((set, get) => ({
     debugLogs: [],
     scenarioMode: 'game',
     totalTokensUsed: 0,
+    runtimeConfig: { ...DEFAULT_WORLD_CONFIG },
   }),
+
+  // Runtime editing actions — modify world state during gameplay
+  updateAgent: (agentId, updates) => {
+    const { world } = get()
+    if (!world) return
+    const newAgents = world.agents.map(a => {
+      if (a.id !== agentId) return a
+      return {
+        ...a,
+        persona: updates.persona ?? a.persona,
+        goals: updates.goals ?? a.goals,
+        decisionStyle: (updates.decisionStyle as any) ?? a.decisionStyle,
+        memory: {
+          ...a.memory,
+          attitude: updates.attitude ?? a.memory.attitude,
+        },
+      }
+    })
+    set({ world: { ...world, agents: newAgents } })
+  },
+
+  addRule: (trigger, effect) => {
+    const { world } = get()
+    if (!world) return
+    const newRule = {
+      id: `rule_custom_${Date.now().toString(36)}`,
+      trigger,
+      effect,
+      fired: false,
+    }
+    set({ world: { ...world, rules: [...world.rules, newRule] } })
+  },
+
+  removeRule: (ruleIndex) => {
+    const { world } = get()
+    if (!world) return
+    set({ world: { ...world, rules: world.rules.filter((_, i) => i !== ruleIndex) } })
+  },
+
+  updateRuntimeConfig: (updates) => {
+    set(s => ({ runtimeConfig: { ...s.runtimeConfig, ...updates } }))
+  },
 }))

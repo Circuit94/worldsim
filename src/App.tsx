@@ -13,6 +13,7 @@ import DebugPanel from './components/DebugPanel'
 import AnalyticsPanel from './components/AnalyticsPanel'
 import TrainingView from './components/TrainingView'
 import SimulationView from './components/SimulationView'
+import RuntimeEditor from './components/RuntimeEditor'
 
 export default function App() {
   const { phase, world, scenarioMode } = useGameStore()
@@ -142,6 +143,7 @@ export default function App() {
                 种子:{world.seed.slice(0, 16)}
               </span>
             )}
+            <RuntimeEditor />
             {scenarioMode === 'game' && (
               <button
                 onClick={() => setShowAnalytics(!showAnalytics)}
