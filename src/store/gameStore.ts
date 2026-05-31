@@ -224,12 +224,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       // --- Agent Autonomous Tick (after player action) ---
       // One agent acts per turn (round-robin), non-blocking on failure
+      // Only in game mode — training/simulation already has agentReactions in the action response
       let finalWorld = newWorld
       let agentLogs: { text: string; type: 'narrative' | 'event' | 'system' }[] = []
       let agentDebug: DebugLog[] = []
       let agentTokens = 0
 
-      if (!response.gameOver) {
+      if (!response.gameOver && scenarioMode === 'game') {
         try {
           const tickResult = await executeAgentTick(newWorld, newPlayer, newPlayer.steps)
           if (tickResult) {
