@@ -13,7 +13,7 @@ export default function TrainingView() {
   const [showReport, setShowReport] = useState(false)
   const [customInput, setCustomInput] = useState('')
   const [isPolishing, setIsPolishing] = useState(false)
-  const logEndRef = useRef<HTMLDivElement>(null)
+  const logContainerRef = useRef<HTMLDivElement>(null)
   
   if (!world || !player) return null
 
@@ -27,7 +27,9 @@ export default function TrainingView() {
   const evalTags = parseEvalTags(lastNarrative)
 
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight
+    }
   }, [narrativeLog.length])
 
   const handlePolish = async () => {
@@ -99,7 +101,7 @@ export default function TrainingView() {
             <div className="px-4 py-2 bg-white/[0.02] border-b border-white/[0.06]">
               <span className="text-xs text-white/50 font-medium">情景记录</span>
             </div>
-            <div className="p-4 max-h-[380px] overflow-y-auto space-y-3 scroll-smooth">
+            <div ref={logContainerRef} className="p-4 max-h-[380px] overflow-y-auto space-y-3 scroll-smooth">
               {narrativeLog.map((log, i) => (
                 <div key={i} className={getLogStyle(log)}>
                   {log.type === 'system' && !log.text.startsWith('\u2192') ? (
@@ -122,7 +124,6 @@ export default function TrainingView() {
                   <span className="text-xs text-white/40">情景推进中...</span>
                 </div>
               )}
-              <div ref={logEndRef} />
             </div>
           </div>
 
