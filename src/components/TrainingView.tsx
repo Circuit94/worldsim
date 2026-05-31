@@ -1,11 +1,6 @@
 /**
- * TrainingView — 情景评估模式专用布局
- * 
- * 修复：
- * - 文字对比度全面提升（最小 12px，颜色至少 gray-400）
- * - 情景记录支持自动滚动到底部
- * - 决策区布局：参考策略方向在上，自定义输入在下
- * - 自定义输入支持 AI 一键优化
+ * TrainingView v2 (Light Theme)
+ * Scenario assessment mode
  */
 
 import { useState, useRef, useEffect } from 'react'
@@ -31,12 +26,10 @@ export default function TrainingView() {
   const lastNarrative = narrativeLog.filter(l => l.type === 'narrative').slice(-1)[0]?.text || ''
   const evalTags = parseEvalTags(lastNarrative)
 
-  // 自动滚动到底部
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [narrativeLog.length])
 
-  // AI 一键优化决策文本
   const handlePolish = async () => {
     if (!customInput.trim()) return
     setIsPolishing(true)
@@ -54,71 +47,70 @@ export default function TrainingView() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-3">
-      {/* 顶部：场景概要 + 阶段进度 */}
-      <div className="bg-gray-900/70 border border-gray-800 rounded-lg p-4">
+      {/* Header: Scenario + Progress */}
+      <div className="ws-card rounded-xl p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs px-2 py-0.5 bg-amber-900/50 border border-amber-800/50 rounded text-amber-300 font-medium">
+              <span className="text-xs px-2 py-0.5 bg-amber-50 border border-amber-200 rounded text-amber-700 font-medium">
                 情景评估
               </span>
-              <h2 className="text-sm font-medium text-gray-100 truncate">{world.name}</h2>
+              <h2 className="text-sm font-medium text-[var(--ws-text-primary)] truncate">{world.name}</h2>
             </div>
-            <p className="text-xs text-gray-400 leading-relaxed">{world.description}</p>
+            <p className="text-xs text-[var(--ws-text-muted)] leading-relaxed">{world.description}</p>
           </div>
           <div className="shrink-0 text-right">
-            <div className="text-xs text-gray-400 mb-1">评估进度</div>
+            <div className="text-xs text-[var(--ws-text-muted)] mb-1">评估进度</div>
             <div className="flex items-center gap-2">
               {['信息收集', '决策推进', '收敛结案'].map((p, i) => (
                 <div key={p} className="flex items-center gap-1">
                   <div className={`w-2 h-2 rounded-full ${
-                    i < phaseIndex ? 'bg-amber-400' : 
-                    i === phaseIndex ? 'bg-amber-400 ring-2 ring-amber-400/30' : 
-                    'bg-gray-700'
+                    i < phaseIndex ? 'bg-amber-500' : 
+                    i === phaseIndex ? 'bg-amber-500 ring-2 ring-amber-200' : 
+                    'bg-gray-200'
                   }`} />
-                  <span className={`text-xs ${i === phaseIndex ? 'text-amber-300' : 'text-gray-500'}`}>
+                  <span className={`text-xs ${i === phaseIndex ? 'text-amber-700' : 'text-[var(--ws-text-muted)]'}`}>
                     {p}
                   </span>
                 </div>
               ))}
             </div>
-            <div className="mt-2 w-40 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div className="mt-2 w-40 h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-amber-500 to-orange-400 transition-all duration-500"
+                className="h-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <div className="text-xs text-gray-400 mt-1 font-mono">{stepCount}/{maxSteps} 轮</div>
+            <div className="text-xs text-[var(--ws-text-muted)] mt-1 font-mono">{stepCount}/{maxSteps} 轮</div>
           </div>
         </div>
-        <div className="mt-3 px-3 py-2 bg-gray-950/50 rounded border border-gray-800">
+        <div className="mt-3 px-3 py-2 bg-[var(--ws-surface-alt)] rounded-lg border border-[var(--ws-border)]">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400 shrink-0">评估目标</span>
-            <p className="text-xs text-gray-300">{world.winCondition}</p>
+            <span className="text-xs text-[var(--ws-text-muted)] shrink-0">评估目标</span>
+            <p className="text-xs text-[var(--ws-text-primary)]">{world.winCondition}</p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3">
-        {/* ========== 左侧：情景推进 ========== */}
+        {/* Left: Scenario Progress */}
         <div className="space-y-3">
-          {/* 情景记录 — 支持自动滚动 */}
-          <div className="bg-gray-900/50 border border-gray-800 rounded-lg overflow-hidden">
-            <div className="px-4 py-2 bg-gray-900/80 border-b border-gray-800">
-              <span className="text-xs text-gray-300 font-medium">情景记录</span>
+          <div className="ws-card rounded-xl overflow-hidden">
+            <div className="px-4 py-2 bg-[var(--ws-surface-alt)] border-b border-[var(--ws-border)]">
+              <span className="text-xs text-[var(--ws-text-secondary)] font-medium">情景记录</span>
             </div>
             <div className="p-4 max-h-[380px] overflow-y-auto space-y-3 scroll-smooth">
               {narrativeLog.map((log, i) => (
                 <div key={i} className={getLogStyle(log)}>
                   {log.type === 'system' && !log.text.startsWith('\u2192') ? (
-                    <span className="text-xs text-gray-400">{log.text}</span>
+                    <span className="text-xs text-[var(--ws-text-muted)]">{log.text}</span>
                   ) : log.text.startsWith('\u2192') ? (
-                    <div className="pl-3 border-l-2 border-amber-700/50">
-                      <span className="text-xs text-amber-400 block mb-0.5">你的决策</span>
-                      <span className="text-sm text-gray-100">{log.text.slice(2)}</span>
+                    <div className="pl-3 border-l-2 border-amber-400">
+                      <span className="text-xs text-amber-700 block mb-0.5">你的决策</span>
+                      <span className="text-sm text-[var(--ws-text-primary)]">{log.text.slice(2)}</span>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-200 leading-relaxed">
+                    <p className="text-sm text-[var(--ws-text-primary)] leading-relaxed">
                       {stripEvalTags(log.text)}
                     </p>
                   )}
@@ -127,22 +119,20 @@ export default function TrainingView() {
               {isProcessing && (
                 <div className="flex items-center gap-2 py-2">
                   <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-                  <span className="text-xs text-gray-400">情景推进中...</span>
+                  <span className="text-xs text-[var(--ws-text-muted)]">情景推进中...</span>
                 </div>
               )}
               <div ref={logEndRef} />
             </div>
           </div>
 
-          {/* ========== 决策输入区 ========== */}
-          <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4 space-y-4">
-            
-            {/* 1. 参考策略方向 — 在上方，默认展开 */}
+          {/* Decision Input */}
+          <div className="ws-card rounded-xl p-4 space-y-4">
             {choices.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs text-gray-200 font-medium">参考策略方向</span>
-                  <span className="text-xs text-gray-500">&mdash; 可直接采用或作为思考起点</span>
+                  <span className="text-xs text-[var(--ws-text-primary)] font-medium">参考策略方向</span>
+                  <span className="text-xs text-[var(--ws-text-muted)]">&mdash; 可直接采用或作为思考起点</span>
                 </div>
                 <div className="space-y-1.5">
                   {choices.map((choice, i) => (
@@ -150,12 +140,12 @@ export default function TrainingView() {
                       key={i}
                       onClick={() => performAction(choice)}
                       disabled={isProcessing}
-                      className="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-all
-                                 bg-gray-950/50 border-gray-700 text-gray-300
-                                 hover:border-amber-600 hover:bg-amber-950/20 hover:text-gray-100
+                      className="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-all cursor-pointer
+                                 bg-white border-[var(--ws-border)] text-[var(--ws-text-secondary)]
+                                 hover:border-amber-300 hover:bg-amber-50/50 hover:text-[var(--ws-text-primary)]
                                  disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      <span className="text-amber-500 font-mono mr-2">{String.fromCharCode(65 + i)}.</span>
+                      <span className="text-amber-600 font-mono mr-2">{String.fromCharCode(65 + i)}.</span>
                       {choice}
                     </button>
                   ))}
@@ -163,11 +153,10 @@ export default function TrainingView() {
               </div>
             )}
 
-            {/* 2. 自定义决策输入 — 在下方，带 AI 优化 */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-200 font-medium">自定义决策</span>
-                <span className="text-xs text-gray-500">用自己的话描述行动方案</span>
+                <span className="text-xs text-[var(--ws-text-primary)] font-medium">自定义决策</span>
+                <span className="text-xs text-[var(--ws-text-muted)]">用自己的话描述行动方案</span>
               </div>
               <textarea
                 value={customInput}
@@ -181,8 +170,8 @@ export default function TrainingView() {
                 placeholder={'输入你的决策方案，可以用口语化表达，例如：\n"先稳住那个反对的人，然后找老板私下聊聊技术方案的时间线"'}
                 disabled={isProcessing}
                 rows={3}
-                className="w-full bg-gray-950 border border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-100
-                           placeholder:text-gray-600 focus:outline-none focus:border-amber-500 transition-colors
+                className="w-full bg-white border border-[var(--ws-border)] rounded-lg px-4 py-3 text-sm text-[var(--ws-text-primary)]
+                           placeholder:text-[var(--ws-text-muted)] focus:outline-none focus:border-amber-400 transition-colors
                            disabled:opacity-40 resize-none leading-relaxed"
               />
               <div className="flex items-center justify-between mt-2">
@@ -190,40 +179,40 @@ export default function TrainingView() {
                   <button
                     onClick={handlePolish}
                     disabled={!customInput.trim() || isProcessing || isPolishing}
-                    className="px-3 py-1.5 text-xs rounded-lg border transition-all
-                               bg-purple-950/50 border-purple-700/50 text-purple-300
-                               hover:bg-purple-900/50 hover:border-purple-600
+                    className="px-3 py-1.5 text-xs rounded-lg border transition-all cursor-pointer
+                               bg-indigo-50 border-indigo-200 text-indigo-600
+                               hover:bg-indigo-100 hover:border-indigo-300
                                disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     {isPolishing ? '\u27F3 优化中...' : '\u2728 AI 润色'}
                   </button>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-[var(--ws-text-muted)]">
                     将口语优化为结构化决策
                   </span>
                 </div>
                 <button
                   onClick={handleSubmit}
                   disabled={!customInput.trim() || isProcessing}
-                  className="px-5 py-1.5 bg-amber-900/60 border border-amber-700/60 rounded-lg text-sm text-amber-200
-                             hover:bg-amber-800/60 hover:border-amber-600 disabled:opacity-40 transition-all"
+                  className="px-5 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700
+                             hover:bg-amber-100 hover:border-amber-300 disabled:opacity-40 transition-all cursor-pointer"
                 >
                   提交决策
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1.5">
+              <p className="text-xs text-[var(--ws-text-muted)] mt-1.5">
                 越详细的决策描述，评估越精准 &middot; Ctrl+Enter 快速提交
               </p>
             </div>
           </div>
         </div>
 
-        {/* ========== 右侧：评估仪表盘 ========== */}
+        {/* Right: Assessment Dashboard */}
         <div className="space-y-3">
-          <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-3">
+          <div className="ws-card rounded-xl p-3">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs text-gray-200 font-medium">能力诊断</h3>
+              <h3 className="text-xs text-[var(--ws-text-primary)] font-medium">能力诊断</h3>
               {evalTags.length > 0 && (
-                <span className="text-xs text-amber-400">实时更新</span>
+                <span className="text-xs text-amber-600">实时更新</span>
               )}
             </div>
             <div className="space-y-3">
@@ -235,27 +224,27 @@ export default function TrainingView() {
             </div>
           </div>
 
-          <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-3">
-            <h3 className="text-xs text-gray-200 font-medium mb-2">利益相关方态势</h3>
+          <div className="ws-card rounded-xl p-3">
+            <h3 className="text-xs text-[var(--ws-text-primary)] font-medium mb-2">利益相关方态势</h3>
             <div className="space-y-2">
               {world.agents.map(agent => (
-                <div key={agent.id} className="p-2 bg-gray-950/60 rounded border border-gray-800/80">
+                <div key={agent.id} className="p-2 bg-[var(--ws-surface-alt)] rounded-lg border border-[var(--ws-border)]">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-200 font-medium">{agent.name}</span>
+                    <span className="text-sm text-[var(--ws-text-primary)] font-medium">{agent.name}</span>
                     <StanceIndicator attitude={agent.memory.attitude} />
                   </div>
-                  <p className="text-xs text-gray-400 leading-relaxed mb-1">
+                  <p className="text-xs text-[var(--ws-text-muted)] leading-relaxed mb-1">
                     {agent.goals[0] || agent.persona.slice(0, 40)}
                   </p>
                   {agent.memory.currentPlan && (
-                    <div className="text-xs text-amber-400/70 mt-1">
+                    <div className="text-xs text-amber-600 mt-1">
                       当前动态：{agent.memory.currentPlan}
                     </div>
                   )}
-                  <div className="mt-1.5 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                  <div className="mt-1.5 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div 
                       className={`h-full rounded-full transition-all duration-500 ${
-                        agent.memory.attitude > 0 ? 'bg-emerald-500' : 'bg-red-500'
+                        agent.memory.attitude > 0 ? 'bg-emerald-400' : 'bg-red-400'
                       }`}
                       style={{ 
                         width: `${Math.abs(agent.memory.attitude)}%`,
@@ -269,17 +258,17 @@ export default function TrainingView() {
           </div>
 
           {stepCount >= 5 && (
-            <div className="bg-gray-900/50 border border-amber-900/30 rounded-lg p-3">
-              <h3 className="text-xs text-amber-400 font-medium mb-2">阶段观察</h3>
-              <div className="text-xs text-gray-300 space-y-1 leading-relaxed">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <h3 className="text-xs text-amber-700 font-medium mb-2">阶段观察</h3>
+              <div className="text-xs text-[var(--ws-text-secondary)] space-y-1 leading-relaxed">
                 {getPhaseInsights(world.agents, stepCount, narrativeLog)}
               </div>
             </div>
           )}
 
           {phase === 'gameover' && (
-            <div className="bg-amber-950/20 border border-amber-800/50 rounded-lg p-3">
-              <h3 className="text-sm text-amber-300 font-medium mb-2">评估完成</h3>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <h3 className="text-sm text-amber-700 font-medium mb-2">评估完成</h3>
               {!report ? (
                 <button
                   onClick={() => {
@@ -287,19 +276,19 @@ export default function TrainingView() {
                     setReport(r)
                     setShowReport(true)
                   }}
-                  className="w-full px-4 py-2.5 bg-amber-900/50 border border-amber-700/50 rounded-lg text-sm text-amber-200 hover:bg-amber-800/50 transition-all"
+                  className="w-full px-4 py-2.5 bg-amber-100 border border-amber-300 rounded-lg text-sm text-amber-800 hover:bg-amber-200 transition-all cursor-pointer"
                 >
                   生成评估报告
                 </button>
               ) : (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-amber-200">
+                    <span className="text-sm text-amber-800">
                       综合评级：<strong className="text-lg">{report.overallGrade}</strong>（{report.overallScore}分）
                     </span>
                     <button
                       onClick={() => setShowReport(!showReport)}
-                      className="text-xs text-amber-400 hover:text-amber-300 transition-colors"
+                      className="text-xs text-amber-600 hover:text-amber-800 transition-colors cursor-pointer"
                     >
                       {showReport ? '收起报告' : '展开报告'}
                     </button>
@@ -316,17 +305,17 @@ export default function TrainingView() {
 }
 
 // ============================================================
-// 辅助组件
+// Sub-components
 // ============================================================
 
 function CompetencyBar({ label, score, description }: { label: string; score: number; description: string }) {
   const grade = score >= 90 ? 'S' : score >= 75 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : 'D'
   const gradeColor: Record<string, string> = {
-    S: 'text-purple-300 bg-purple-950/50 border-purple-700',
-    A: 'text-emerald-300 bg-emerald-950/50 border-emerald-700',
-    B: 'text-amber-300 bg-amber-950/50 border-amber-700',
-    C: 'text-orange-300 bg-orange-950/50 border-orange-700',
-    D: 'text-red-300 bg-red-950/50 border-red-700',
+    S: 'text-purple-700 bg-purple-50 border-purple-200',
+    A: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+    B: 'text-amber-700 bg-amber-50 border-amber-200',
+    C: 'text-orange-700 bg-orange-50 border-orange-200',
+    D: 'text-red-700 bg-red-50 border-red-200',
   }
   const gradeExplanation: Record<string, string> = {
     S: '卓越 — 超出预期的高水平表现',
@@ -335,25 +324,25 @@ function CompetencyBar({ label, score, description }: { label: string; score: nu
     C: '待提升 — 低于预期，有改进空间',
     D: '薄弱 — 需要重点关注和训练',
   }
-  const barColor = score >= 75 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-orange-500'
+  const barColor = score >= 75 ? 'bg-emerald-400' : score >= 50 ? 'bg-amber-400' : 'bg-orange-400'
 
   return (
     <div className="group">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-gray-200">{label}</span>
+        <span className="text-xs text-[var(--ws-text-primary)]">{label}</span>
         <span className={`text-xs px-1.5 py-0.5 rounded border font-mono font-medium ${gradeColor[grade]}`}>
           {grade}
         </span>
       </div>
-      <div className="relative h-2 bg-gray-800 rounded-full overflow-hidden">
+      <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
         <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${score}%` }} />
-        <div className="absolute top-0 left-[60%] w-px h-full bg-gray-500/50" />
+        <div className="absolute top-0 left-[60%] w-px h-full bg-gray-300/50" />
       </div>
       <div className="flex items-center justify-between mt-0.5">
-        <p className="text-xs text-gray-400">{description}</p>
-        <span className="text-xs text-gray-400 font-mono">{score}</span>
+        <p className="text-xs text-[var(--ws-text-muted)]">{description}</p>
+        <span className="text-xs text-[var(--ws-text-muted)] font-mono">{score}</span>
       </div>
-      <p className="text-xs text-gray-500 mt-0.5 hidden group-hover:block">
+      <p className="text-xs text-[var(--ws-text-muted)] mt-0.5 hidden group-hover:block">
         {gradeExplanation[grade]}
       </p>
     </div>
@@ -362,17 +351,17 @@ function CompetencyBar({ label, score, description }: { label: string; score: nu
 
 function StanceIndicator({ attitude }: { attitude: number }) {
   const label = attitude > 30 ? '支持' : attitude > 10 ? '偏支持' : attitude > -10 ? '中立' : attitude > -30 ? '偏反对' : '反对'
-  const color = attitude > 30 ? 'text-emerald-400' : attitude > 10 ? 'text-emerald-300' : attitude > -10 ? 'text-gray-300' : attitude > -30 ? 'text-orange-300' : 'text-red-400'
+  const color = attitude > 30 ? 'text-emerald-600' : attitude > 10 ? 'text-emerald-500' : attitude > -10 ? 'text-[var(--ws-text-secondary)]' : attitude > -30 ? 'text-orange-500' : 'text-red-500'
   return <span className={`text-xs font-medium ${color}`}>{label}</span>
 }
 
 // ============================================================
-// 工具函数
+// Utilities
 // ============================================================
 
 function getLogStyle(log: { type: string; text: string }): string {
-  if (log.type === 'system') return 'text-gray-400'
-  if (log.type === 'event') return 'text-amber-300 text-xs'
+  if (log.type === 'system') return 'text-[var(--ws-text-muted)]'
+  if (log.type === 'event') return 'text-amber-700 text-xs'
   return ''
 }
 
@@ -466,7 +455,7 @@ function getPhaseInsights(agents: any[], stepCount: number, narrativeLog: any[])
 }
 
 // ============================================================
-// 评估报告面板
+// Report Panel
 // ============================================================
 
 function ReportPanel({ report }: { report: TrainingReport }) {
@@ -484,53 +473,53 @@ function ReportPanel({ report }: { report: TrainingReport }) {
     <div className="space-y-3 mt-2">
       <button
         onClick={handleCopy}
-        className="text-xs px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-gray-300 hover:text-gray-100 transition-colors"
+        className="text-xs px-3 py-1.5 bg-white border border-[var(--ws-border)] rounded text-[var(--ws-text-secondary)] hover:text-[var(--ws-text-primary)] transition-colors cursor-pointer"
       >
         {copied ? '已复制 Markdown \u2713' : '复制完整报告 (Markdown)'}
       </button>
 
-      <div className="bg-gray-950/60 rounded border border-gray-800/80 p-3">
-        <h4 className="text-xs text-gray-200 font-medium mb-2">能力维度评估</h4>
+      <div className="bg-[var(--ws-surface-alt)] rounded-lg border border-[var(--ws-border)] p-3">
+        <h4 className="text-xs text-[var(--ws-text-primary)] font-medium mb-2">能力维度评估</h4>
         <div className="space-y-2">
           {report.competencies.map(c => (
             <div key={c.dimension}>
               <div className="flex items-center justify-between mb-0.5">
-                <span className="text-xs text-gray-200">{c.dimension}</span>
+                <span className="text-xs text-[var(--ws-text-primary)]">{c.dimension}</span>
                 <span className={`text-xs px-1.5 py-0.5 rounded font-mono font-medium ${
-                  c.grade === 'S' ? 'text-purple-300 bg-purple-950/50' :
-                  c.grade === 'A' ? 'text-emerald-300 bg-emerald-950/50' :
-                  c.grade === 'B' ? 'text-amber-300 bg-amber-950/50' :
-                  c.grade === 'C' ? 'text-orange-300 bg-orange-950/50' :
-                  'text-red-300 bg-red-950/50'
+                  c.grade === 'S' ? 'text-purple-700 bg-purple-50' :
+                  c.grade === 'A' ? 'text-emerald-700 bg-emerald-50' :
+                  c.grade === 'B' ? 'text-amber-700 bg-amber-50' :
+                  c.grade === 'C' ? 'text-orange-700 bg-orange-50' :
+                  'text-red-700 bg-red-50'
                 }`}>{c.grade} ({c.score})</span>
               </div>
-              <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${
-                    c.score >= 75 ? 'bg-emerald-500' : c.score >= 50 ? 'bg-amber-500' : 'bg-orange-500'
+                    c.score >= 75 ? 'bg-emerald-400' : c.score >= 50 ? 'bg-amber-400' : 'bg-orange-400'
                   }`}
                   style={{ width: `${c.score}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-400 mt-0.5">{c.suggestion}</p>
+              <p className="text-xs text-[var(--ws-text-muted)] mt-0.5">{c.suggestion}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="bg-gray-950/60 rounded border border-gray-800/80 p-3">
-        <h4 className="text-xs text-gray-200 font-medium mb-2">利益相关方结果</h4>
+      <div className="bg-[var(--ws-surface-alt)] rounded-lg border border-[var(--ws-border)] p-3">
+        <h4 className="text-xs text-[var(--ws-text-primary)] font-medium mb-2">利益相关方结果</h4>
         <div className="space-y-1.5">
           {report.stakeholders.map(s => (
             <div key={s.name} className="flex items-center justify-between text-xs">
-              <span className="text-gray-200">{s.name}</span>
+              <span className="text-[var(--ws-text-primary)]">{s.name}</span>
               <span className={`font-mono ${
-                s.relationship === 'allied' ? 'text-emerald-400' :
-                s.relationship === 'opposed' ? 'text-red-400' :
-                'text-gray-400'
+                s.relationship === 'allied' ? 'text-emerald-600' :
+                s.relationship === 'opposed' ? 'text-red-500' :
+                'text-[var(--ws-text-muted)]'
               }`}>
                 {s.finalAttitude > 0 ? '+' : ''}{s.finalAttitude}
-                <span className="text-gray-500 ml-1">
+                <span className="text-[var(--ws-text-muted)] ml-1">
                   ({s.attitudeChange > 0 ? '\u2191' : s.attitudeChange < 0 ? '\u2193' : '\u2192'}{Math.abs(s.attitudeChange)})
                 </span>
               </span>
@@ -539,32 +528,32 @@ function ReportPanel({ report }: { report: TrainingReport }) {
         </div>
       </div>
 
-      <div className="bg-gray-950/60 rounded border border-gray-800/80 p-3">
-        <h4 className="text-xs text-gray-200 font-medium mb-2">总评</h4>
-        <p className="text-xs text-gray-300 leading-relaxed">{report.summary}</p>
+      <div className="bg-[var(--ws-surface-alt)] rounded-lg border border-[var(--ws-border)] p-3">
+        <h4 className="text-xs text-[var(--ws-text-primary)] font-medium mb-2">总评</h4>
+        <p className="text-xs text-[var(--ws-text-secondary)] leading-relaxed">{report.summary}</p>
       </div>
 
       {report.strengths.length > 0 && (
-        <div className="bg-gray-950/60 rounded border border-emerald-900/30 p-3">
-          <h4 className="text-xs text-emerald-400 font-medium mb-1">核心优势</h4>
+        <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-3">
+          <h4 className="text-xs text-emerald-700 font-medium mb-1">核心优势</h4>
           {report.strengths.map((s, i) => (
-            <p key={i} className="text-xs text-gray-300 leading-relaxed">&bull; {s}</p>
+            <p key={i} className="text-xs text-[var(--ws-text-secondary)] leading-relaxed">&bull; {s}</p>
           ))}
         </div>
       )}
       {report.improvements.length > 0 && (
-        <div className="bg-gray-950/60 rounded border border-orange-900/30 p-3">
-          <h4 className="text-xs text-orange-400 font-medium mb-1">改进方向</h4>
+        <div className="bg-orange-50 rounded-lg border border-orange-200 p-3">
+          <h4 className="text-xs text-orange-700 font-medium mb-1">改进方向</h4>
           {report.improvements.map((s, i) => (
-            <p key={i} className="text-xs text-gray-300 leading-relaxed">&bull; {s}</p>
+            <p key={i} className="text-xs text-[var(--ws-text-secondary)] leading-relaxed">&bull; {s}</p>
           ))}
         </div>
       )}
 
-      <div className="bg-gray-950/60 rounded border border-amber-900/30 p-3">
-        <h4 className="text-xs text-amber-400 font-medium mb-1">下一步建议</h4>
+      <div className="bg-amber-50 rounded-lg border border-amber-200 p-3">
+        <h4 className="text-xs text-amber-700 font-medium mb-1">下一步建议</h4>
         {report.nextSteps.map((s, i) => (
-          <p key={i} className="text-xs text-gray-300 leading-relaxed">&bull; {s}</p>
+          <p key={i} className="text-xs text-[var(--ws-text-secondary)] leading-relaxed">&bull; {s}</p>
         ))}
       </div>
     </div>

@@ -1,14 +1,6 @@
 /**
- * SimulationView — 多智能体仿真模式专用布局
- * 
- * 定位：Agent-Based Modeling 推演观测台
- * 设计参考：NetLogo Monitor × AnyLogic Dashboard × 学术仿真论文图表
- * 
- * 核心组成：
- * - 顶部：仿真控制台（运行/暂停/步进/速度/导出）
- * - 左侧：推演记录（结构化时间线 + 关键变量追踪）
- * - 右侧：Agent 状态面板 + 涌现指标 + 数据摘要
- * - 无任何游戏化元素
+ * SimulationView v2 (Light Theme)
+ * Multi-agent simulation observation dashboard
  */
 
 import { useState, useEffect, useRef } from 'react'
@@ -29,7 +21,6 @@ export default function SimulationView() {
   const maxSteps = 20
   const progressPercent = (stepCount / maxSteps) * 100
 
-  // 自动推进逻辑
   useEffect(() => {
     if (autoRunning && !isProcessing && phase === 'playing' && stepCount < maxSteps) {
       const delay = speed === 'slow' ? 4000 : speed === 'normal' ? 2000 : 800
@@ -43,17 +34,14 @@ export default function SimulationView() {
     return () => { if (autoRef.current) clearTimeout(autoRef.current) }
   }, [autoRunning, isProcessing, phase, stepCount])
 
-  // 自动滚动到最新日志
   useEffect(() => {
     if (logRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight
     }
   }, [narrativeLog.length])
 
-  // 解析推演指标（从 narrative 中提取 |[key:value] 格式）
   const metrics = parseSimMetrics(narrativeLog)
 
-  // 数据导出
   const handleExport = () => {
     const data = exportSession()
     if (data) {
@@ -71,115 +59,106 @@ export default function SimulationView() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-3">
-      {/* ========== 仿真控制台 ========== */}
-      <div className="bg-gray-900/70 border border-gray-800 rounded-lg p-4">
+      {/* Control Panel */}
+      <div className="ws-card rounded-xl p-4">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] px-1.5 py-0.5 bg-emerald-900/50 border border-emerald-800/50 rounded text-emerald-300 font-medium">
+              <span className="text-[10px] px-1.5 py-0.5 bg-cyan-50 border border-cyan-200 rounded text-cyan-700 font-medium">
                 多智能体仿真
               </span>
-              <h2 className="text-sm font-medium text-gray-200 truncate">{world.name}</h2>
+              <h2 className="text-sm font-medium text-[var(--ws-text-primary)] truncate">{world.name}</h2>
             </div>
-            <p className="text-xs text-gray-500">{world.description}</p>
+            <p className="text-xs text-[var(--ws-text-muted)]">{world.description}</p>
           </div>
           
-          {/* 控制按钮组 */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* 速度 */}
-            <div className="flex items-center border border-gray-700 rounded overflow-hidden">
+            <div className="flex items-center border border-[var(--ws-border)] rounded overflow-hidden">
               {(['slow', 'normal', 'fast'] as const).map(s => (
                 <button
                   key={s}
                   onClick={() => setSpeed(s)}
-                  className={`px-2 py-1 text-[10px] transition-colors ${
+                  className={`px-2 py-1 text-[10px] transition-colors cursor-pointer ${
                     speed === s 
-                      ? 'bg-emerald-900/60 text-emerald-300' 
-                      : 'text-gray-500 hover:text-gray-300'
+                      ? 'bg-cyan-50 text-cyan-700' 
+                      : 'text-[var(--ws-text-muted)] hover:text-[var(--ws-text-secondary)]'
                   }`}
                 >
-                  {s === 'slow' ? '1×' : s === 'normal' ? '2×' : '5×'}
+                  {s === 'slow' ? '1x' : s === 'normal' ? '2x' : '5x'}
                 </button>
               ))}
             </div>
 
-            {/* 步进 */}
             <button
               onClick={() => performAction('__AUTO_TICK__')}
               disabled={isProcessing || autoRunning || stepCount >= maxSteps}
-              className="px-3 py-1.5 rounded text-xs border border-gray-700 text-gray-400
-                         hover:border-emerald-600 hover:text-emerald-300 disabled:opacity-30 transition-all"
+              className="px-3 py-1.5 rounded text-xs border border-[var(--ws-border)] text-[var(--ws-text-secondary)]
+                         hover:border-cyan-300 hover:text-cyan-700 disabled:opacity-30 transition-all cursor-pointer"
             >
               步进
             </button>
 
-            {/* 运行/暂停 */}
             <button
               onClick={() => setAutoRunning(!autoRunning)}
               disabled={stepCount >= maxSteps}
-              className={`px-4 py-1.5 rounded text-xs font-medium transition-all ${
+              className={`px-4 py-1.5 rounded text-xs font-medium transition-all cursor-pointer ${
                 autoRunning
-                  ? 'bg-red-900/40 border border-red-700/50 text-red-300 hover:bg-red-800/40'
-                  : 'bg-emerald-900/40 border border-emerald-700/50 text-emerald-300 hover:bg-emerald-800/40'
+                  ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100'
+                  : 'bg-cyan-50 border border-cyan-200 text-cyan-700 hover:bg-cyan-100'
               } disabled:opacity-30`}
             >
-              {autoRunning ? '■ 暂停' : '▶ 运行'}
+              {autoRunning ? '\u25A0 暂停' : '\u25B6 运行'}
             </button>
 
-            {/* 导出 */}
             <button
               onClick={handleExport}
-              className="px-3 py-1.5 rounded text-xs border border-gray-700 text-gray-400
-                         hover:border-blue-600 hover:text-blue-300 transition-all relative"
+              className="px-3 py-1.5 rounded text-xs border border-[var(--ws-border)] text-[var(--ws-text-secondary)]
+                         hover:border-indigo-300 hover:text-indigo-600 transition-all relative cursor-pointer"
             >
-              {showExport ? '✓ 已导出' : '导出数据'}
+              {showExport ? '\u2713 已导出' : '导出数据'}
             </button>
 
-            {/* 轮次 */}
-            <div className="text-center pl-2 border-l border-gray-800">
-              <div className="text-lg font-mono text-emerald-400 leading-none">{stepCount}</div>
-              <div className="text-[9px] text-gray-600">/{maxSteps}</div>
+            <div className="text-center pl-2 border-l border-[var(--ws-border)]">
+              <div className="text-lg font-mono text-cyan-600 leading-none">{stepCount}</div>
+              <div className="text-[9px] text-[var(--ws-text-muted)]">/{maxSteps}</div>
             </div>
           </div>
         </div>
 
-        {/* 进度条 */}
-        <div className="mt-3 h-1 bg-gray-800 rounded-full overflow-hidden">
+        <div className="mt-3 h-1 bg-gray-100 rounded-full overflow-hidden">
           <div 
-            className="h-full bg-gradient-to-r from-emerald-600 to-teal-400 transition-all duration-300"
+            className="h-full bg-gradient-to-r from-cyan-500 to-indigo-400 transition-all duration-300"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3">
-        {/* ========== 左侧：推演记录 ========== */}
+        {/* Left: Timeline */}
         <div className="space-y-3">
-          {/* 时间线日志 */}
-          <div className="bg-gray-900/50 border border-gray-800 rounded-lg overflow-hidden">
-            <div className="px-4 py-2 bg-gray-900/80 border-b border-gray-800 flex items-center justify-between">
-              <span className="text-[10px] text-gray-500 font-medium">推演记录</span>
+          <div className="ws-card rounded-xl overflow-hidden">
+            <div className="px-4 py-2 bg-[var(--ws-surface-alt)] border-b border-[var(--ws-border)] flex items-center justify-between">
+              <span className="text-[10px] text-[var(--ws-text-muted)] font-medium">推演记录</span>
               {isProcessing && (
-                <span className="text-[10px] text-emerald-400 animate-pulse flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                <span className="text-[10px] text-cyan-600 animate-pulse flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
                   计算中
                 </span>
               )}
             </div>
             <div ref={logRef} className="p-4 max-h-[480px] overflow-y-auto">
-              <div className="relative pl-4 border-l border-gray-800/50 space-y-4">
+              <div className="relative pl-4 border-l border-gray-200 space-y-4">
                 {narrativeLog.map((log, i) => (
                   <div key={i} className="relative">
-                    {/* 时间线节点 */}
                     <div className={`absolute -left-[21px] w-2 h-2 rounded-full ${
-                      log.type === 'system' ? 'bg-emerald-500/80' :
-                      log.type === 'event' ? 'bg-cyan-500/80' :
-                      'bg-gray-600'
+                      log.type === 'system' ? 'bg-cyan-500' :
+                      log.type === 'event' ? 'bg-amber-500' :
+                      'bg-gray-300'
                     }`} />
                     <div className={`pl-2 ${
-                      log.type === 'system' ? 'text-emerald-400/60 text-[10px] font-mono' :
-                      log.type === 'event' ? 'text-cyan-400/70 text-[11px]' :
-                      'text-gray-300 text-sm leading-relaxed'
+                      log.type === 'system' ? 'text-cyan-600 text-[10px] font-mono' :
+                      log.type === 'event' ? 'text-amber-700 text-[11px]' :
+                      'text-[var(--ws-text-primary)] text-sm leading-relaxed'
                     }`}>
                       {log.type === 'narrative' ? stripSimMetrics(log.text) : log.text}
                     </div>
@@ -189,15 +168,14 @@ export default function SimulationView() {
             </div>
           </div>
 
-          {/* 涌现指标追踪（如果LLM返回了） */}
           {metrics.length > 0 && (
-            <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-3">
-              <h3 className="text-[10px] text-gray-500 font-medium mb-2">关键变量追踪</h3>
+            <div className="ws-card rounded-xl p-3">
+              <h3 className="text-[10px] text-[var(--ws-text-muted)] font-medium mb-2">关键变量追踪</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {metrics.map((m, i) => (
-                  <div key={i} className="p-2 bg-gray-950/60 rounded border border-gray-800/80 text-center">
-                    <div className="text-sm font-mono text-emerald-400">{m.value}</div>
-                    <div className="text-[9px] text-gray-500 mt-0.5">{m.key}</div>
+                  <div key={i} className="p-2 bg-[var(--ws-surface-alt)] rounded border border-[var(--ws-border)] text-center">
+                    <div className="text-sm font-mono text-cyan-600">{m.value}</div>
+                    <div className="text-[9px] text-[var(--ws-text-muted)] mt-0.5">{m.key}</div>
                   </div>
                 ))}
               </div>
@@ -205,11 +183,10 @@ export default function SimulationView() {
           )}
         </div>
 
-        {/* ========== 右侧：Agent 状态 + 系统指标 ========== */}
+        {/* Right: Agent Status + Metrics */}
         <div className="space-y-3">
-          {/* Agent 实时状态 */}
-          <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-3">
-            <h3 className="text-xs text-gray-400 font-medium mb-2">智能体状态</h3>
+          <div className="ws-card rounded-xl p-3">
+            <h3 className="text-xs text-[var(--ws-text-secondary)] font-medium mb-2">智能体状态</h3>
             <div className="space-y-2">
               {world.agents.map(agent => (
                 <AgentCard key={agent.id} agent={agent} allAgents={world.agents} />
@@ -217,9 +194,8 @@ export default function SimulationView() {
             </div>
           </div>
 
-          {/* 系统指标 */}
-          <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-3">
-            <h3 className="text-xs text-gray-400 font-medium mb-2">系统指标</h3>
+          <div className="ws-card rounded-xl p-3">
+            <h3 className="text-xs text-[var(--ws-text-secondary)] font-medium mb-2">系统指标</h3>
             <div className="grid grid-cols-2 gap-2">
               <MetricCell 
                 label="交互事件" 
@@ -251,20 +227,17 @@ export default function SimulationView() {
             </div>
           </div>
 
-          {/* 关系热力图 */}
-          <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-3">
-            <h3 className="text-xs text-gray-400 font-medium mb-2">Agent 态势分布</h3>
+          <div className="ws-card rounded-xl p-3">
+            <h3 className="text-xs text-[var(--ws-text-secondary)] font-medium mb-2">Agent 态势分布</h3>
             <div className="space-y-1.5">
               {world.agents.map(agent => (
                 <div key={agent.id} className="flex items-center gap-2">
-                  <span className="text-[10px] text-gray-500 w-16 truncate shrink-0">{agent.name}</span>
-                  <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden relative">
-                    {/* 中线标记 */}
-                    <div className="absolute left-1/2 top-0 w-px h-full bg-gray-700" />
-                    {/* 态度条 */}
+                  <span className="text-[10px] text-[var(--ws-text-muted)] w-16 truncate shrink-0">{agent.name}</span>
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden relative">
+                    <div className="absolute left-1/2 top-0 w-px h-full bg-gray-300" />
                     <div 
                       className={`absolute top-0 h-full rounded-full transition-all duration-500 ${
-                        agent.memory.attitude >= 0 ? 'bg-emerald-500/70' : 'bg-red-500/70'
+                        agent.memory.attitude >= 0 ? 'bg-emerald-400' : 'bg-red-400'
                       }`}
                       style={{
                         left: agent.memory.attitude >= 0 ? '50%' : `${50 + agent.memory.attitude / 2}%`,
@@ -272,7 +245,7 @@ export default function SimulationView() {
                       }}
                     />
                   </div>
-                  <span className="text-[9px] text-gray-600 font-mono w-8 text-right">
+                  <span className="text-[9px] text-[var(--ws-text-muted)] font-mono w-8 text-right">
                     {agent.memory.attitude > 0 ? '+' : ''}{agent.memory.attitude}
                   </span>
                 </div>
@@ -280,11 +253,10 @@ export default function SimulationView() {
             </div>
           </div>
 
-          {/* 仿真结束提示 */}
           {(stepCount >= maxSteps || phase === 'gameover') && (
-            <div className="bg-emerald-950/20 border border-emerald-800/40 rounded-lg p-3">
-              <h3 className="text-xs text-emerald-300 font-medium mb-1">推演完成</h3>
-              <p className="text-[10px] text-gray-400 leading-relaxed">
+            <div className="bg-cyan-50 border border-cyan-200 rounded-xl p-3">
+              <h3 className="text-xs text-cyan-700 font-medium mb-1">推演完成</h3>
+              <p className="text-[10px] text-[var(--ws-text-secondary)] leading-relaxed">
                 {maxSteps} 轮推演已完成。点击"导出数据"获取完整的 Agent 行为日志和交互数据，可用于进一步分析。
               </p>
             </div>
@@ -296,7 +268,7 @@ export default function SimulationView() {
 }
 
 // ============================================================
-// 辅助组件
+// Sub-components
 // ============================================================
 
 function AgentCard({ agent, allAgents }: { agent: any; allAgents: any[] }) {
@@ -312,9 +284,9 @@ function AgentCard({ agent, allAgents }: { agent: any; allAgents: any[] }) {
   }
 
   return (
-    <div className="p-2 bg-gray-950/60 rounded border border-gray-800/80">
+    <div className="p-2 bg-[var(--ws-surface-alt)] rounded-lg border border-[var(--ws-border)]">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-gray-300 font-medium flex items-center gap-1.5">
+        <span className="text-xs text-[var(--ws-text-primary)] font-medium flex items-center gap-1.5">
           {(() => {
             const visual = getAgentVisual(agent.name, agent.id)
             return (
@@ -328,27 +300,24 @@ function AgentCard({ agent, allAgents }: { agent: any; allAgents: any[] }) {
           })()}
           {agent.name}
         </span>
-        <span className="text-[9px] px-1.5 py-0.5 bg-gray-800 rounded text-gray-500 font-mono">
+        <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 border border-[var(--ws-border)] rounded text-[var(--ws-text-muted)] font-mono">
           {decisionStyleLabel[agent.decisionStyle] || agent.decisionStyle}
         </span>
       </div>
-      {/* 当前目标 */}
       <div className="flex flex-wrap gap-1 mb-1">
         {agent.goals.slice(0, 2).map((g: string, i: number) => (
-          <span key={i} className="text-[9px] px-1.5 py-0.5 bg-emerald-950/30 border border-emerald-900/30 rounded text-emerald-400/60">
+          <span key={i} className="text-[9px] px-1.5 py-0.5 bg-cyan-50 border border-cyan-200 rounded text-cyan-700">
             {g.length > 15 ? g.slice(0, 15) + '...' : g}
           </span>
         ))}
       </div>
-      {/* 最新行为 */}
       {lastObs && (
-        <p className="text-[10px] text-gray-500 mt-1 leading-relaxed">
+        <p className="text-[10px] text-[var(--ws-text-muted)] mt-1 leading-relaxed">
           最新：{lastObs.content}
         </p>
       )}
-      {/* 当前计划 */}
       {agent.memory.currentPlan && (
-        <p className="text-[10px] text-teal-400/50 mt-0.5">
+        <p className="text-[10px] text-cyan-600 mt-0.5">
           计划：{agent.memory.currentPlan}
         </p>
       )}
@@ -358,21 +327,20 @@ function AgentCard({ agent, allAgents }: { agent: any; allAgents: any[] }) {
 
 function MetricCell({ label, value, total, suffix }: { label: string; value: number; total?: number; suffix?: string }) {
   return (
-    <div className="p-2 bg-gray-950/60 rounded border border-gray-800/80 text-center">
-      <div className="text-sm font-mono text-emerald-400 leading-none">
-        {value}{total !== undefined && <span className="text-gray-600 text-[10px]">/{total}</span>}
-        {suffix && <span className="text-gray-600 text-[10px]">{suffix}</span>}
+    <div className="p-2 bg-[var(--ws-surface-alt)] rounded-lg border border-[var(--ws-border)] text-center">
+      <div className="text-sm font-mono text-cyan-600 leading-none">
+        {value}{total !== undefined && <span className="text-[var(--ws-text-muted)] text-[10px]">/{total}</span>}
+        {suffix && <span className="text-[var(--ws-text-muted)] text-[10px]">{suffix}</span>}
       </div>
-      <div className="text-[9px] text-gray-500 mt-1">{label}</div>
+      <div className="text-[9px] text-[var(--ws-text-muted)] mt-1">{label}</div>
     </div>
   )
 }
 
 // ============================================================
-// 工具函数
+// Utilities
 // ============================================================
 
-/** 从narrative中解析仿真指标（格式：|[key:value]） */
 function parseSimMetrics(narrativeLog: { text: string; type: string }[]): { key: string; value: string }[] {
   const lastNarrative = narrativeLog.filter(l => l.type === 'narrative').slice(-1)[0]?.text || ''
   const pipeIndex = lastNarrative.lastIndexOf('|')
@@ -383,7 +351,6 @@ function parseSimMetrics(narrativeLog: { text: string; type: string }[]): { key:
   return [...matches].map(m => ({ key: m[1], value: m[2] }))
 }
 
-/** 去除指标标签后的纯叙述文本 */
 function stripSimMetrics(text: string): string {
   const pipeIndex = text.lastIndexOf('|')
   if (pipeIndex === -1) return text

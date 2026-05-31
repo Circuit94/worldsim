@@ -64,11 +64,11 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-6">
-          {/* 加载动画 */}
+          {/* Loading animation */}
           <div className="relative w-16 h-16 mx-auto">
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 animate-pulse" />
-            <div className="absolute inset-0 rounded-2xl border border-purple-500/20 flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="1.5" strokeLinecap="round" className="animate-spin" style={{ animationDuration: '3s' }}>
+            <div className="absolute inset-0 rounded-2xl bg-indigo-100 animate-pulse" />
+            <div className="absolute inset-0 rounded-2xl border border-indigo-200 flex items-center justify-center">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round" className="animate-spin" style={{ animationDuration: '3s' }}>
                 {scenarioMode === 'game' 
                   ? <><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></>
                   : scenarioMode === 'training'
@@ -87,12 +87,12 @@ export default function App() {
             <p className="text-[var(--ws-text-muted)] text-xs">通常需要 5-15 秒</p>
           </div>
 
-          {/* 步骤列表 */}
+          {/* Steps */}
           <div className="space-y-1.5">
             {loadingText.map((t, i) => (
               <p key={i} className="text-[var(--ws-text-muted)] text-[11px] animate-fade-in-up" 
                  style={{ animationDelay: `${i * 200}ms`, opacity: 0 }}>
-                <span className="text-purple-400/60 mr-1.5">▸</span>{t}
+                <span className="text-indigo-400 mr-1.5">{'\u25B8'}</span>{t}
               </p>
             ))}
           </div>
@@ -107,15 +107,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen p-4 sm:p-6">
-      {/* 顶部栏 */}
+      {/* Top bar */}
       <div className="max-w-6xl mx-auto mb-5">
         <div className="flex items-center justify-between">
           <h1 className="text-sm font-mono text-[var(--ws-text-muted)]">
-            <span className="text-gradient-brand font-semibold">WorldSim</span>
+            <span className="text-indigo-600 font-semibold">WorldSim</span>
             <span className={`ml-2 text-[10px] px-2 py-0.5 rounded-full border ${
-              scenarioMode === 'game' ? 'text-purple-300 border-purple-500/20 bg-purple-500/5' :
-              scenarioMode === 'training' ? 'text-amber-300 border-amber-500/20 bg-amber-500/5' :
-              'text-emerald-300 border-emerald-500/20 bg-emerald-500/5'
+              scenarioMode === 'game' ? 'text-indigo-600 border-indigo-200 bg-indigo-50' :
+              scenarioMode === 'training' ? 'text-amber-700 border-amber-200 bg-amber-50' :
+              'text-cyan-700 border-cyan-200 bg-cyan-50'
             }`}>
               {scenarioMode === 'game' ? '探索' : scenarioMode === 'training' ? '情景评估' : '仿真'}
             </span>
@@ -132,8 +132,8 @@ export default function App() {
                 onClick={() => setShowAnalytics(!showAnalytics)}
                 className={`p-2 rounded-lg border transition-all cursor-pointer ${
                   showAnalytics 
-                    ? 'bg-purple-500/10 border-purple-500/20 text-purple-300' 
-                    : 'bg-white/[0.02] border-white/[0.06] text-[var(--ws-text-muted)] hover:border-purple-500/20 hover:text-purple-300'
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-600' 
+                    : 'bg-white border-[var(--ws-border)] text-[var(--ws-text-muted)] hover:border-indigo-200 hover:text-indigo-600'
                 }`}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/></svg>
@@ -141,8 +141,8 @@ export default function App() {
             )}
             <button
               onClick={() => useGameStore.getState().reset()}
-              className="p-2 rounded-lg bg-white/[0.02] border border-white/[0.06]
-                         hover:border-red-500/20 text-[var(--ws-text-muted)] hover:text-red-400 transition-all cursor-pointer"
+              className="p-2 rounded-lg bg-white border border-[var(--ws-border)]
+                         hover:border-red-200 text-[var(--ws-text-muted)] hover:text-red-500 transition-all cursor-pointer"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
@@ -150,7 +150,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* 模式专属布局 */}
+      {/* Mode-specific layouts */}
       {scenarioMode === 'training' && <TrainingView />}
       {scenarioMode === 'simulation' && <SimulationView />}
       {scenarioMode === 'game' && (
@@ -170,9 +170,9 @@ export default function App() {
             <div className="space-y-4">
               <ActionPanel />
 
-              {/* Agent 信息 */}
+              {/* Agent info */}
               {world && world.agents.length > 0 && (
-                <div className="glass-card rounded-2xl p-5 space-y-3">
+                <div className="ws-card rounded-2xl p-5 space-y-3">
                   <h3 className="text-xs font-medium text-[var(--ws-text-secondary)] uppercase tracking-wider">
                     角色 <span className="text-[var(--ws-text-muted)]">({world.agents.length} 活跃)</span>
                   </h3>
@@ -180,7 +180,7 @@ export default function App() {
                     {world.agents.map(agent => (
                       <div
                         key={agent.id}
-                        className="p-3 bg-white/[0.02] border border-white/[0.04] rounded-xl text-xs"
+                        className="p-3 bg-[var(--ws-surface-alt)] border border-[var(--ws-border)] rounded-xl text-xs"
                       >
                         <div className="flex items-center justify-between">
                           <span className="flex items-center gap-2">
@@ -198,26 +198,26 @@ export default function App() {
                             <strong className="text-[var(--ws-text-primary)]">{agent.name}</strong>
                           </span>
                           <span className={`font-mono text-[11px] ${
-                            agent.memory.attitude > 20 ? 'text-emerald-400' :
-                            agent.memory.attitude < -20 ? 'text-red-400' :
+                            agent.memory.attitude > 20 ? 'text-emerald-600' :
+                            agent.memory.attitude < -20 ? 'text-red-500' :
                             'text-[var(--ws-text-muted)]'
                           }`}>
                             {agent.memory.attitude > 0 ? '+' : ''}{agent.memory.attitude}
                           </span>
                         </div>
                         {agent.memory.currentPlan && (
-                          <p className="text-purple-400/60 mt-1.5 text-[10px]">
-                            → {agent.memory.currentPlan}
+                          <p className="text-indigo-500 mt-1.5 text-[10px]">
+                            {'\u2192'} {agent.memory.currentPlan}
                           </p>
                         )}
                         {agent.memory.reflections.length > 0 && (
-                          <p className="text-blue-400/50 mt-1 text-[10px] italic">
-                            ◦ {agent.memory.reflections[agent.memory.reflections.length - 1]}
+                          <p className="text-sky-500 mt-1 text-[10px] italic">
+                            {'\u25E6'} {agent.memory.reflections[agent.memory.reflections.length - 1]}
                           </p>
                         )}
                         {agent.memory.observations.length > 0 && (
                           <p className="text-[var(--ws-text-muted)] mt-1 text-[10px]">
-                            ▸ {agent.memory.observations[agent.memory.observations.length - 1]?.content}
+                            {'\u25B8'} {agent.memory.observations[agent.memory.observations.length - 1]?.content}
                           </p>
                         )}
                       </div>
