@@ -1,11 +1,88 @@
 @import "tailwindcss";
 
 /* ============================================================
- * WorldSim — 自定义动画
- * 用于游戏探索模式地图的微动画系统
+ * WorldSim — Design System v2
+ * 深色科技感 + 精致玻璃态 + 统一紫蓝色调
  * ============================================================ */
 
-/* 树木/草地摇曳 */
+/* ===== 全局基础 ===== */
+:root {
+  --ws-bg: #08080f;
+  --ws-surface: rgba(15, 15, 25, 0.8);
+  --ws-border: rgba(120, 100, 255, 0.08);
+  --ws-border-hover: rgba(120, 100, 255, 0.2);
+  --ws-accent: #8b5cf6;
+  --ws-accent-soft: rgba(139, 92, 246, 0.15);
+  --ws-text-primary: #f0eef8;
+  --ws-text-secondary: #a8a3b8;
+  --ws-text-muted: #5c5775;
+  --ws-glow: rgba(139, 92, 246, 0.3);
+}
+
+body {
+  background: var(--ws-bg);
+  background-image: 
+    radial-gradient(ellipse 80% 60% at 50% -20%, rgba(139, 92, 246, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+  min-height: 100vh;
+}
+
+/* ===== 玻璃态卡片 ===== */
+@utility glass-card {
+  background: linear-gradient(135deg, rgba(20, 18, 35, 0.9) 0%, rgba(12, 12, 22, 0.95) 100%);
+  border: 1px solid var(--ws-border);
+  backdrop-filter: blur(12px);
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+@utility glass-card-hover {
+  background: linear-gradient(135deg, rgba(25, 22, 45, 0.95) 0%, rgba(15, 14, 28, 0.98) 100%);
+  border-color: var(--ws-border-hover);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(139, 92, 246, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+@utility glass-surface {
+  background: rgba(12, 12, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
+}
+
+/* ===== 按钮系统 ===== */
+@utility btn-primary {
+  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 50%, #3b82f6 100%);
+  box-shadow: 
+    0 4px 16px rgba(124, 58, 237, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@utility btn-primary-hover {
+  background: linear-gradient(135deg, #8b5cf6 0%, #818cf8 50%, #60a5fa 100%);
+  box-shadow: 
+    0 8px 24px rgba(124, 58, 237, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+@utility btn-ghost {
+  background: rgba(139, 92, 246, 0.06);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  transition: all 0.2s ease;
+}
+
+@utility btn-ghost-hover {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+/* ===== 动画系统 ===== */
 @keyframes sway {
   0%, 100% { transform: rotate(0deg) translateX(0); }
   25% { transform: rotate(1.5deg) translateX(0.5px); }
@@ -15,40 +92,41 @@
   0%, 100% { transform: rotate(0deg); }
   50% { transform: rotate(1deg); }
 }
-
-/* 水面波纹 */
 @keyframes wave {
   0%, 100% { transform: translateY(0) scale(1); opacity: 0.6; }
   50% { transform: translateY(-1px) scale(1.02); opacity: 0.8; }
 }
-
-/* NPC 微微上下浮动 */
 @keyframes bob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-2px); }
 }
-
-/* 物品漂浮 */
 @keyframes float {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   33% { transform: translateY(-2px) rotate(2deg); }
   66% { transform: translateY(-1px) rotate(-1deg); }
 }
-
-/* 玩家光晕扩散 */
 @keyframes ping-slow {
   0% { transform: scale(1); opacity: 0.6; }
   50% { transform: scale(1.3); opacity: 0.2; }
   100% { transform: scale(1.5); opacity: 0; }
 }
-
-/* 缓慢脉冲 */
 @keyframes pulse-slow {
   0%, 100% { opacity: 0.5; }
   50% { opacity: 0.8; }
 }
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes fade-in-up {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
 
-/* 注册为 Tailwind 工具类 */
 @utility animate-sway {
   animation: sway 4s ease-in-out infinite;
 }
@@ -70,19 +148,55 @@
 @utility animate-pulse-slow {
   animation: pulse-slow 3s ease-in-out infinite;
 }
+@utility animate-shimmer {
+  animation: shimmer 3s linear infinite;
+  background-size: 200% 100%;
+}
+@utility animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+@utility animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
 
-/* 全局滚动条美化 */
+/* ===== 滚动条 ===== */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 100, 120, 0.3);
-  border-radius: 3px;
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 100, 120, 0.5);
+  background: rgba(139, 92, 246, 0.4);
+}
+
+/* ===== 文字渐变 ===== */
+@utility text-gradient-brand {
+  background: linear-gradient(135deg, #c4b5fd 0%, #a78bfa 30%, #818cf8 60%, #93c5fd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@utility text-gradient-warm {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #ef4444 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== 进度条美化 ===== */
+@utility progress-bar {
+  background: linear-gradient(90deg, #7c3aed 0%, #6366f1 50%, #3b82f6 100%);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+}
+
+/* ===== 输入框聚焦 ===== */
+input:focus, textarea:focus {
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
 }

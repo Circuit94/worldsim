@@ -32,14 +32,14 @@ export default function ActionPanel() {
 
   if (phase === 'gameover') {
     return (
-      <div className="space-y-3">
-        <div className="text-center text-sm text-gray-400 py-4">
+      <div className="glass-card rounded-2xl p-5 space-y-4">
+        <div className="text-center text-sm text-[var(--ws-text-secondary)] py-4">
           模拟已结束
         </div>
         <button
           onClick={() => useGameStore.getState().reset()}
-          className="w-full py-2 rounded-lg text-sm bg-gray-800 border border-gray-700
-                     hover:border-purple-500 transition-colors"
+          className="w-full py-2.5 rounded-xl text-sm font-medium
+                     btn-ghost hover:btn-ghost-hover cursor-pointer"
         >
           重新开始
         </button>
@@ -54,11 +54,11 @@ export default function ActionPanel() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="glass-card rounded-2xl p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs text-gray-500 uppercase tracking-wider">可选行动</h3>
+        <h3 className="text-xs font-medium text-[var(--ws-text-secondary)] uppercase tracking-wider">可选行动</h3>
         {choices.length > 0 && (
-          <span className="text-[10px] text-gray-700">按 1-{choices.length} 选择，/ 输入自定义</span>
+          <span className="text-[10px] text-[var(--ws-text-muted)]">按 1-{choices.length} 选择</span>
         )}
       </div>
 
@@ -70,24 +70,26 @@ export default function ActionPanel() {
             key={i}
             onClick={() => handleAction(choice)}
             disabled={isProcessing}
-            className="text-left px-3 py-2 text-sm rounded-lg
-                       bg-gray-900 border border-gray-700
-                       hover:border-purple-500 hover:bg-gray-800
+            className="text-left px-4 py-3 text-sm rounded-xl
+                       bg-white/[0.02] border border-white/[0.06]
+                       hover:border-purple-500/30 hover:bg-purple-500/[0.04]
                        disabled:opacity-40 disabled:cursor-not-allowed
-                       transition-all group"
+                       transition-all duration-200 group cursor-pointer"
           >
-            <kbd className="text-[10px] text-gray-600 bg-gray-800 px-1.5 py-0.5 rounded mr-2
-                           group-hover:text-purple-400 group-hover:bg-purple-950 transition-colors">
+            <kbd className="text-[10px] text-[var(--ws-text-muted)] bg-white/[0.04] px-1.5 py-0.5 rounded mr-2
+                           group-hover:text-purple-400 group-hover:bg-purple-500/10 transition-colors font-mono">
               {i + 1}
             </kbd>
-            {choice}
+            <span className="text-[var(--ws-text-secondary)] group-hover:text-[var(--ws-text-primary)] transition-colors">
+              {choice}
+            </span>
           </button>
         ))}
       </div>
       )}
 
-      {/* 自定义行动输入 — 始终可见 */}
-      <div className="space-y-1">
+      {/* 自定义行动输入 */}
+      <div className="space-y-2">
         <div className="flex gap-2">
           <input
             ref={inputRef}
@@ -97,30 +99,33 @@ export default function ActionPanel() {
             onKeyDown={e => e.key === 'Enter' && handleAction(customAction)}
             placeholder="做点别的...（按 / 聚焦）"
             disabled={isProcessing}
-            className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm
-                       focus:outline-none focus:border-cyan-500 transition-colors
+            className="flex-1 bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-2.5 text-sm
+                       text-[var(--ws-text-primary)] placeholder:text-[var(--ws-text-muted)]
+                       focus:outline-none focus:border-purple-500/40 transition-all
                        disabled:opacity-40"
           />
           <button
             onClick={() => handleAction(customAction)}
             disabled={!customAction.trim() || isProcessing}
-            className="px-4 py-2 text-sm rounded-lg bg-cyan-900 border border-cyan-700
-                       hover:bg-cyan-800 disabled:opacity-40 transition-colors"
+            className="px-4 py-2.5 text-sm rounded-xl
+                       bg-purple-500/10 border border-purple-500/20 text-purple-300
+                       hover:bg-purple-500/20 hover:border-purple-500/30
+                       disabled:opacity-40 transition-all cursor-pointer"
           >
             ↵
           </button>
         </div>
         {choices.length > 0 && (
-          <p className="text-[10px] text-gray-700 pl-1">不限于上面的选项，你可以尝试任何行动</p>
+          <p className="text-[10px] text-[var(--ws-text-muted)] pl-1">不限于上面的选项，你可以尝试任何行动</p>
         )}
       </div>
 
       {isProcessing && (
-        <div className="flex items-center justify-center gap-2 text-xs text-gray-500 py-2 animate-pulse">
+        <div className="flex items-center justify-center gap-2 text-xs text-[var(--ws-text-muted)] py-3">
           <div className="flex gap-1">
-            <span className="animate-bounce" style={{ animationDelay: '0ms' }}>●</span>
-            <span className="animate-bounce" style={{ animationDelay: '150ms' }}>●</span>
-            <span className="animate-bounce" style={{ animationDelay: '300ms' }}>●</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
           <span>Agent 正在观察、反思、决策...</span>
         </div>
