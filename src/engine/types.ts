@@ -166,6 +166,56 @@ export interface DebugLog {
 }
 
 // ============================================================
+// World Configuration — User-customizable parameters
+// ============================================================
+
+export interface CustomNPC {
+  name: string;
+  persona: string;
+  goals: string[];
+  decisionStyle: 'rational' | 'emotional' | 'chaotic';
+  initialAttitude: number;  // -100 to 100
+}
+
+export interface CustomRule {
+  trigger: string;
+  effect: string;
+}
+
+export interface WorldConfig {
+  // Scene structure
+  mapSize: number;           // 3-8 for game mode
+  npcCount: number;          // 1-6
+  itemCount: number;         // 0-5 (game mode only)
+  ruleCount: number;         // 0-5
+  maxSteps: number | null;   // null = unlimited
+
+  // Custom NPCs (optional, AI fills the rest)
+  customNPCs: CustomNPC[];
+  customRules: CustomRule[];
+
+  // Prompt strategy
+  narrativeStyle: 'concise' | 'literary' | 'academic' | 'casual';
+  difficulty: 'cooperative' | 'neutral' | 'adversarial';
+  temperature: number;       // 0.3 - 1.2
+  eventFrequency: number;    // every N steps (0 = disabled)
+}
+
+export const DEFAULT_WORLD_CONFIG: WorldConfig = {
+  mapSize: 5,
+  npcCount: 3,
+  itemCount: 2,
+  ruleCount: 2,
+  maxSteps: null,
+  customNPCs: [],
+  customRules: [],
+  narrativeStyle: 'concise',
+  difficulty: 'neutral',
+  temperature: 0.8,
+  eventFrequency: 3,
+}
+
+// ============================================================
 // Session Data — For behavior export & replay
 // ============================================================
 

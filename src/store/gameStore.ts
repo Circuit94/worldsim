@@ -6,7 +6,8 @@
  */
 
 import { create } from 'zustand'
-import type { WorldSchema, PlayerState, DebugLog, SessionData, ActionResponse } from '../engine/types'
+import type { WorldSchema, PlayerState, DebugLog, SessionData, ActionResponse, WorldConfig } from '../engine/types'
+import { DEFAULT_WORLD_CONFIG } from '../engine/types'
 import { generateWorld, getPlayerStart } from '../engine/worldGen'
 import { processAction, applyEffects } from '../engine/actionHandler'
 import { markRulesFired, checkRuleTriggers } from '../engine/ruleEngine'
@@ -92,7 +93,7 @@ interface GameState {
   
   // Actions
   setApiKey: (key: string, model?: GeminiModel) => void
-  startGame: (theme: string, mode?: ScenarioMode) => Promise<void>
+  startGame: (theme: string, mode?: ScenarioMode, worldConfig?: WorldConfig) => Promise<void>
   performAction: (action: string) => Promise<void>
   toggleDebug: () => void
   exportSession: () => SessionData | null
@@ -117,12 +118,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ error: null })
   },
 
-  startGame: async (theme: string, mode: ScenarioMode = 'game') => {
+  startGame: async (theme: string, mode: ScenarioMode = 'game', worldConfig?: WorldConfig) => {
     const config = getScenarioConfig(mode)
+    const finalWorldConfig = worldConfig || DEFAULT_WORLD_CONFIG
     set({ phase: 'generating', error: null, isProcessing: true, scenarioMode: mode })
 
     try {
-      const { world, debug } = await generateWorld(theme, undefined, config.worldGenModifier || undefined)
+      const { world, debug } = await generateWorld(theme, undefined, config.worldGenModifier || undefined, finalWorldConfig)
       
       const rawData = JSON.parse(debug.response)
       const startPos = getPlayerStart(rawData)

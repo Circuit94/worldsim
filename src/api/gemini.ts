@@ -132,10 +132,12 @@ const DEEPSEEK_BASE_URL = 'https://api.deepseek.com'
 
 async function callDeepSeek(
   prompt: string,
-  type: 'world_gen' | 'action' | 'agent_tick'
+  type: 'world_gen' | 'action' | 'agent_tick',
+  temperature?: number
 ): Promise<{ text: string; promptTokens: number; responseTokens: number }> {
   const tempMap = { world_gen: 0.9, action: 0.7, agent_tick: 0.6 }
   const tokenMap = { world_gen: 4096, action: 2048, agent_tick: 512 }
+  const effectiveTemp = temperature ?? tempMap[type]
 
   const response = await fetch(`${DEEPSEEK_BASE_URL}/v1/chat/completions`, {
     method: 'POST',
@@ -156,7 +158,7 @@ async function callDeepSeek(
         },
       ],
       response_format: { type: 'json_object' },
-      temperature: tempMap[type],
+      temperature: effectiveTemp,
       max_tokens: tokenMap[type],
       stream: false,
     }),
@@ -185,7 +187,8 @@ async function callDeepSeek(
 
 async function callGeminiAPI(
   prompt: string,
-  type: 'world_gen' | 'action' | 'agent_tick'
+  type: 'world_gen' | 'action' | 'agent_tick',
+  temperature?: number
 ): Promise<{ text: string; promptTokens: number; responseTokens: number }> {
   // Lazy load GoogleGenerativeAI
   if (!genAI) {
@@ -195,12 +198,13 @@ async function callGeminiAPI(
 
   const tempMap = { world_gen: 0.9, action: 0.7, agent_tick: 0.6 }
   const tokenMap = { world_gen: 2048, action: 1024, agent_tick: 512 }
+  const effectiveTemp = temperature ?? tempMap[type]
 
   const model = genAI.getGenerativeModel({
     model: currentModel,
     generationConfig: {
       responseMimeType: 'application/json',
-      temperature: tempMap[type],
+      temperature: effectiveTemp,
       maxOutputTokens: tokenMap[type],
     },
   })
@@ -222,13 +226,16 @@ async function callGeminiAPI(
 
 export async function callGemini(
   prompt: string,
-  type: 'world_gen' | 'action' | 'agent_tick'
+  type: 'world_gen' | 'action' | 'agent_tick',
+  temperatureOverride?: number
 ): Promise<{ data: any; debug: DebugLog }> {
   if (!apiKey && !customProvider) throw new Error('API 密钥未设置，请先输入你的 API Key。')
 
   const provider = getProvider()
   const maxRetries = 2
   let lastError: any = null
+  const tempMap = { world_gen: 0.9, action: 0.7, agent_tick: 0.6 }
+  const effectiveTemp = temperatureOverride ?? tempMap[type]
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const startTime = Date.now()
@@ -237,18 +244,17 @@ export async function callGemini(
       // Call the appropriate provider
       let callResult: { text: string; promptTokens: number; responseTokens: number }
       if (provider === 'custom' && customProvider) {
-        const tempMap = { world_gen: 0.9, action: 0.7, agent_tick: 0.6 }
         const tokenMap = { world_gen: 4096, action: 2048, agent_tick: 512 }
         callResult = await customProvider.call(prompt, {
           type,
-          temperature: tempMap[type],
+          temperature: effectiveTemp,
           maxTokens: tokenMap[type],
           jsonMode: true,
         })
       } else if (provider === 'deepseek') {
-        callResult = await callDeepSeek(prompt, type)
+        callResult = await callDeepSeek(prompt, type, effectiveTemp)
       } else {
-        callResult = await callGeminiAPI(prompt, type)
+        callResult = await callGeminiAPI(prompt, type, effectiveTemp)
       }
       const { text, promptTokens, responseTokens } = callResult
 

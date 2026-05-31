@@ -14,14 +14,21 @@ import type { ScenarioMode } from './scenarios'
 // 提示词 1：世界生成（仅游戏模式使用，培训/仿真通过 modifier 完全覆盖）
 // ============================================================
 
-export function buildWorldGenPrompt(theme: string, seed: string): string {
-  return `生成一个 5×5 地块世界。主题: "${theme}" | 种子: "${seed}"
+export function buildWorldGenPrompt(
+  theme: string,
+  seed: string,
+  mapSize: number = 5,
+  npcCount: number = 3,
+  itemCount: number = 2,
+  ruleCount: number = 2
+): string {
+  return `生成一个 ${mapSize}×${mapSize} 地块世界。主题: "${theme}" | 种子: "${seed}"
 
 严格JSON输出，中文：
 {
   "name": "世界名（4字以内）",
   "description": "一句话背景",
-  "map": [["tile_id",...],...]  // 5行×5列
+  "map": [["tile_id",...],...]  // ${mapSize}行×${mapSize}列
   "tiles": { "tile_id": { "name": "地名（2-4字）", "walkable": true, "description": "一句话环境描述" } },
   "agents": [
     { "id": "agent_1", "name": "角色名（2-3字）", "position": [x,y], "persona": "性格+目标+说话风格（50字内）", "goals": ["目标"], "decisionStyle": "rational|emotional|chaotic" }
@@ -37,9 +44,9 @@ export function buildWorldGenPrompt(theme: string, seed: string): string {
 }
 
 约束:
-- 5×5 紧凑地图，3-4个区域，路径相连
-- 2-3个NPC（友好/中立/敌对各一），id用agent_1格式
-- 2个物品，2条规则
+- ${mapSize}×${mapSize} 紧凑地图，3-4个区域，路径相连
+- ${npcCount}个NPC，id用agent_1格式
+- ${itemCount}个物品，${ruleCount}条规则
 - 地名、角色名都要短（2-4字），不要长词
 - tiles的description要体现环境特征（如"昏暗的金属走廊"/"长满苔藓的石墙"），系统会根据关键词自动匹配视觉样式
 - 禁止输出emoji字段，所有视觉由系统自动生成
