@@ -168,9 +168,11 @@ function SliderField({ label, value, onChange, min, max, step = 1, suffix = '' }
 // Main Component
 // ============================================================
 
+const DEFAULT_API_KEY = 'sk-31785522c7204bd7bae0d85a82c612ae'
+
 export default function WorldInput() {
   const [theme, setTheme] = useState('')
-  const [apiKey, setApiKey] = useState('')
+  const [apiKey, setApiKey] = useState(DEFAULT_API_KEY)
   const [model, setModel] = useState<GeminiModel>('deepseek-chat')
   const [mode, setMode] = useState<ScenarioMode>('game')
   const [showApiSection, setShowApiSection] = useState(false)
@@ -187,9 +189,8 @@ export default function WorldInput() {
     const stored = getStoredApiKey()
     if (stored) {
       setApiKey(stored)
-    } else {
-      setShowApiSection(true)
     }
+    // 默认 key 已预填，无需弹出配置面板
   }, [])
 
   const handleStart = () => {
