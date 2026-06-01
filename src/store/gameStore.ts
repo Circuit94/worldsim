@@ -24,9 +24,9 @@ function getInitialChoices(mode: ScenarioMode): string[] {
   switch (mode) {
     case 'training':
       return [
-        '[信息梳理] 逐一确认各利益相关方的核心诉求、底线和当前情绪状态，建立博弈全景图',
-        '[主动破局] 直接向决策权最大的一方提出你的方案框架，争取主导议程设置',
-        '[试探施压] 以有限让步测试对方底线弹性，同时通过提问暴露对方信息盲区',
+        '[信息锁定] 直接向在场最关键的决策者提出一个封闭式问题，迫使其表明立场底线，同时观察其他人的即时反应来判断联盟关系',
+        '[主动破局] 在所有人开口之前率先抛出你的方案框架（含具体数字和时间节点），抢占议程主导权，迫使其他方围绕你的方案展开讨论',
+        '[定向施压] 选择立场最弱的一方，用已掌握的事实数据当面质疑其核心论点的逻辑漏洞，通过击破一点来动摇整体僵局',
       ]
     case 'simulation':
       return [] // 仿真模式自动推进，不需要选项
@@ -70,6 +70,13 @@ function getInitialNarrativeLog(
 
 export type GamePhase = 'setup' | 'generating' | 'playing' | 'gameover'
 
+/** 到达 maxSteps 时触发的全局总结状态 */
+export interface SummaryState {
+  triggered: boolean
+  stepReached: number
+  canContinue: boolean
+}
+
 interface GameState {
   // Core state
   phase: GamePhase
@@ -98,6 +105,9 @@ interface GameState {
   // Milestone feedback
   milestoneFeedback: MilestoneFeedback | null
 
+  // Summary overlay (maxSteps reached)
+  summaryState: SummaryState | null
+
   // Actions
   setApiKey: (key: string, model?: GeminiModel) => void
   startGame: (theme: string, mode?: ScenarioMode, worldConfig?: WorldConfig) => Promise<void>
@@ -108,6 +118,10 @@ interface GameState {
 
   // Milestone actions
   dismissMilestone: () => void
+
+  // Summary actions
+  dismissSummary: () => void
+  continuePastSummary: () => void
 
   // Runtime editing actions
   updateAgent: (agentId: string, updates: Partial<{ persona: string; goals: string[]; decisionStyle: string; attitude: number }>) => void
@@ -130,6 +144,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   totalTokensUsed: 0,
   runtimeConfig: { ...DEFAULT_WORLD_CONFIG },
   milestoneFeedback: null,
+  summaryState: null,
 
   setApiKey: (key: string, model?: GeminiModel) => {
     initGemini(key, model)
@@ -288,6 +303,12 @@ export const useGameStore = create<GameState>((set, get) => ({
         log.type === 'narrative' ? { ...log, text: stripMilestoneTag(log.text) } : log
       )
 
+      // 检测是否到达 maxSteps（触发全局总结弹窗，而非直接结束）
+      const config = getScenarioConfig(scenarioMode)
+      const reachedMaxSteps = config.maxSteps !== null && newPlayer.steps >= config.maxSteps && !response.gameOver
+      const currentSummary = get().summaryState
+      const shouldShowSummary = reachedMaxSteps && (!currentSummary || !currentSummary.triggered)
+
       set({
         world: finalWorld,
         player: newPlayer,
@@ -298,6 +319,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         totalTokensUsed: newTotalTokens,
         isProcessing: false,
         milestoneFeedback: milestone,
+        summaryState: shouldShowSummary ? { triggered: true, stepReached: newPlayer.steps, canContinue: true } : get().summaryState,
       })
 
       // Auto-save after each successful action
@@ -347,9 +369,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     totalTokensUsed: 0,
     runtimeConfig: { ...DEFAULT_WORLD_CONFIG },
     milestoneFeedback: null,
+    summaryState: null,
   }),
 
   dismissMilestone: () => set({ milestoneFeedback: null }),
+
+  dismissSummary: () => set({ summaryState: null }),
+
+  continuePastSummary: () => {
+    // 用户选择继续挑战：清除 summary 状态，允许继续游玩
+    set({ summaryState: null })
+  },
 
   // Runtime editing actions — modify world state during gameplay
   updateAgent: (agentId, updates) => {

@@ -7,6 +7,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { generateTrainingReport, reportToMarkdown, type TrainingReport } from '../engine/trainingReport'
 import MilestoneFeedbackCard from './MilestoneFeedback'
+import SummaryOverlay from './SummaryOverlay'
 
 export default function TrainingView() {
   const { world, player, narrativeLog, choices, isProcessing, performAction, phase } = useGameStore()
@@ -80,6 +81,9 @@ export default function TrainingView() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-3">
+      {/* Summary Overlay */}
+      <SummaryOverlay />
+
       {/* Header: Scenario + Progress */}
       <div className="rounded-xl p-4 bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
         <div className="flex items-start justify-between gap-4">

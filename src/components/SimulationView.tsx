@@ -7,9 +7,10 @@ import { useState, useEffect, useRef } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { getAgentVisual } from '../engine/tileVisuals'
 import MilestoneFeedbackCard from './MilestoneFeedback'
+import SummaryOverlay from './SummaryOverlay'
 
 export default function SimulationView() {
-  const { world, player, narrativeLog, isProcessing, performAction, phase, exportSession } = useGameStore()
+  const { world, player, narrativeLog, isProcessing, performAction, phase, exportSession, summaryState } = useGameStore()
   const [autoRunning, setAutoRunning] = useState(false)
   const [speed, setSpeed] = useState<'slow' | 'normal' | 'fast'>('normal')
   const [showExport, setShowExport] = useState(false)
@@ -23,17 +24,18 @@ export default function SimulationView() {
   const progressPercent = (stepCount / maxSteps) * 100
 
   useEffect(() => {
-    if (autoRunning && !isProcessing && phase === 'playing' && stepCount < maxSteps) {
+    // 当 summary 弹窗显示时暂停自动推进
+    if (autoRunning && !isProcessing && phase === 'playing' && stepCount < maxSteps && !summaryState) {
       const delay = speed === 'slow' ? 4000 : speed === 'normal' ? 2000 : 800
       autoRef.current = window.setTimeout(() => {
         performAction('__AUTO_TICK__')
       }, delay)
     }
-    if (stepCount >= maxSteps && autoRunning) {
+    if ((stepCount >= maxSteps || summaryState) && autoRunning) {
       setAutoRunning(false)
     }
     return () => { if (autoRef.current) clearTimeout(autoRef.current) }
-  }, [autoRunning, isProcessing, phase, stepCount])
+  }, [autoRunning, isProcessing, phase, stepCount, summaryState])
 
   useEffect(() => {
     if (logRef.current) {
@@ -60,6 +62,9 @@ export default function SimulationView() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-3">
+      {/* Summary Overlay */}
+      <SummaryOverlay />
+
       {/* Control Panel */}
       <div className="rounded-xl p-4 bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
         <div className="flex items-center justify-between gap-4">
