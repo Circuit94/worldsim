@@ -3,7 +3,7 @@
  * Scenario assessment mode
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { generateTrainingReport, reportToMarkdown, type TrainingReport } from '../engine/trainingReport'
 import MilestoneFeedbackCard from './MilestoneFeedback'
@@ -14,6 +14,9 @@ export default function TrainingView() {
   const [showReport, setShowReport] = useState(false)
   const [customInput, setCustomInput] = useState('')
   const [isPolishing, setIsPolishing] = useState(false)
+  const [scoreHistory, setScoreHistory] = useState<Record<string, number[]>>({
+    analytical: [], decisiveness: [], stakeholder: [], influence: [], strategic: []
+  })
   const logContainerRef = useRef<HTMLDivElement>(null)
   
   if (!world || !player) return null
@@ -26,6 +29,33 @@ export default function TrainingView() {
 
   const lastNarrative = narrativeLog.filter(l => l.type === 'narrative').slice(-1)[0]?.text || ''
   const evalTags = parseEvalTags(lastNarrative)
+
+  // 计算当前分数并追踪历史
+  const currentScores = useMemo(() => {
+    const dimensions = ['analytical', 'decisiveness', 'stakeholder', 'influence', 'strategic'] as const
+    const scores: Record<string, number> = {}
+    for (const dim of dimensions) {
+      scores[dim] = getCompetencyScore(world.agents, dim, evalTags, stepCount)
+    }
+    return scores
+  }, [world.agents, evalTags, stepCount])
+
+  // 记录分数历史（每当 stepCount 变化时追加）
+  useEffect(() => {
+    if (stepCount === 0) return
+    setScoreHistory(prev => {
+      const next = { ...prev }
+      for (const [dim, score] of Object.entries(currentScores)) {
+        const history = [...(prev[dim] || [])]
+        // 只在新轮次追加（避免重复）
+        if (history.length < stepCount) {
+          history.push(score)
+        }
+        next[dim] = history
+      }
+      return next
+    })
+  }, [stepCount])
 
   useEffect(() => {
     if (logContainerRef.current) {
@@ -223,11 +253,11 @@ export default function TrainingView() {
               )}
             </div>
             <div className="space-y-3">
-              <CompetencyBar label="分析判断力" score={getCompetencyScore(world.agents, 'analytical', evalTags)} description="信息识别、逻辑推理、本质洞察" />
-              <CompetencyBar label="决策魄力" score={getCompetencyScore(world.agents, 'decisiveness', evalTags)} description="果断程度、风险承受、明确立场" />
-              <CompetencyBar label="利益相关方管理" score={getCompetencyScore(world.agents, 'stakeholder', evalTags)} description="多方平衡、诉求整合、关系维护" />
-              <CompetencyBar label="沟通影响力" score={getCompetencyScore(world.agents, 'influence', evalTags)} description="说服技巧、情绪管理、信息节奏" />
-              <CompetencyBar label="战略格局" score={getCompetencyScore(world.agents, 'strategic', evalTags)} description="长期视角、系统思维、取舍智慧" />
+              <CompetencyBar label="分析判断力" score={currentScores.analytical} history={scoreHistory.analytical} description="信息识别、逻辑推理、本质洞察" />
+              <CompetencyBar label="决策魄力" score={currentScores.decisiveness} history={scoreHistory.decisiveness} description="果断程度、风险承受、明确立场" />
+              <CompetencyBar label="利益相关方管理" score={currentScores.stakeholder} history={scoreHistory.stakeholder} description="多方平衡、诉求整合、关系维护" />
+              <CompetencyBar label="沟通影响力" score={currentScores.influence} history={scoreHistory.influence} description="说服技巧、情绪管理、信息节奏" />
+              <CompetencyBar label="战略格局" score={currentScores.strategic} history={scoreHistory.strategic} description="长期视角、系统思维、取舍智慧" />
             </div>
           </div>
 
@@ -316,7 +346,7 @@ export default function TrainingView() {
 // Sub-components
 // ============================================================
 
-function CompetencyBar({ label, score, description }: { label: string; score: number; description: string }) {
+function CompetencyBar({ label, score, history, description }: { label: string; score: number; history: number[]; description: string }) {
   const grade = score >= 90 ? 'S' : score >= 75 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : 'D'
   const gradeColor: Record<string, string> = {
     S: 'text-purple-300 bg-purple-500/15 border-purple-400/30',
@@ -325,35 +355,93 @@ function CompetencyBar({ label, score, description }: { label: string; score: nu
     C: 'text-orange-300 bg-orange-500/15 border-orange-400/30',
     D: 'text-red-300 bg-red-500/15 border-red-400/30',
   }
-  const gradeExplanation: Record<string, string> = {
-    S: '卓越 — 超出预期的高水平表现',
-    A: '优秀 — 明显高于平均水平',
-    B: '良好 — 达到基本预期',
-    C: '待提升 — 低于预期，有改进空间',
-    D: '薄弱 — 需要重点关注和训练',
-  }
   const barColor = score >= 75 ? 'bg-emerald-400' : score >= 50 ? 'bg-amber-400' : 'bg-orange-400'
+
+  // 计算趋势变化
+  const prevScore = history.length >= 2 ? history[history.length - 2] : null
+  const delta = prevScore !== null ? score - prevScore : null
+  const trendIcon = delta === null ? '' : delta > 0 ? '↑' : delta < 0 ? '↓' : '→'
+  const trendColor = delta === null ? '' : delta > 3 ? 'text-emerald-400' : delta > 0 ? 'text-emerald-300/70' : delta < -3 ? 'text-red-400' : delta < 0 ? 'text-orange-400' : 'text-white/40'
 
   return (
     <div className="group">
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs text-white/70">{label}</span>
-        <span className={`text-xs px-1.5 py-0.5 rounded border font-mono font-medium ${gradeColor[grade]}`}>
-          {grade}
-        </span>
+        <div className="flex items-center gap-1.5">
+          {/* 趋势指示器 */}
+          {delta !== null && (
+            <span className={`text-[10px] font-mono font-medium ${trendColor}`}>
+              {trendIcon}{Math.abs(delta)}
+            </span>
+          )}
+          <span className={`text-xs px-1.5 py-0.5 rounded border font-mono font-medium ${gradeColor[grade]}`}>
+            {grade}
+          </span>
+        </div>
       </div>
       <div className="relative h-2 bg-white/[0.06] rounded-full overflow-hidden">
         <div className={`h-full ${barColor} rounded-full transition-all duration-700`} style={{ width: `${score}%` }} />
-        <div className="absolute top-0 left-[60%] w-px h-full bg-white/10" />
+        {/* 上一轮位置标记 */}
+        {prevScore !== null && Math.abs(score - prevScore) > 2 && (
+          <div 
+            className="absolute top-0 w-0.5 h-full bg-white/20 transition-all duration-500"
+            style={{ left: `${prevScore}%` }}
+          />
+        )}
       </div>
       <div className="flex items-center justify-between mt-0.5">
-        <p className="text-xs text-white/30">{description}</p>
-        <span className="text-xs text-white/30 font-mono">{score}</span>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-white/30">{description}</p>
+          {/* 迷你趋势线 */}
+          {history.length >= 2 && (
+            <MiniSparkline data={history} current={score} />
+          )}
+        </div>
+        <span className="text-xs text-white/40 font-mono font-medium">{score}</span>
       </div>
-      <p className="text-xs text-white/30 mt-0.5 hidden group-hover:block">
-        {gradeExplanation[grade]}
-      </p>
     </div>
+  )
+}
+
+/** 迷你趋势折线图 */
+function MiniSparkline({ data, current }: { data: number[]; current: number }) {
+  const allPoints = [...data, current]
+  const min = Math.min(...allPoints) - 5
+  const max = Math.max(...allPoints) + 5
+  const range = max - min || 1
+  const width = 40
+  const height = 12
+
+  const points = allPoints.map((v, i) => {
+    const x = (i / Math.max(allPoints.length - 1, 1)) * width
+    const y = height - ((v - min) / range) * height
+    return `${x},${y}`
+  }).join(' ')
+
+  // 趋势颜色
+  const lastDelta = allPoints.length >= 2 ? allPoints[allPoints.length - 1] - allPoints[allPoints.length - 2] : 0
+  const color = lastDelta > 0 ? '#34d399' : lastDelta < 0 ? '#f87171' : '#94a3b8'
+
+  return (
+    <svg width={width} height={height} className="opacity-60">
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* 当前点 */}
+      {allPoints.length > 0 && (
+        <circle
+          cx={(allPoints.length - 1) / Math.max(allPoints.length - 1, 1) * width}
+          cy={height - ((current - min) / range) * height}
+          r="2"
+          fill={color}
+        />
+      )}
+    </svg>
   )
 }
 
@@ -412,27 +500,44 @@ function stripEvalTags(text: string): string {
   return text
 }
 
-function getCompetencyScore(agents: any[], dimension: string, evalTags: { dimension: string; grade: string }[]): number {
-  const gradeMap: Record<string, number> = { S: 92, A: 78, B: 62, C: 45, D: 25 }
+function getCompetencyScore(agents: any[], dimension: string, evalTags: { dimension: string; grade: string }[], stepCount: number = 0): number {
+  // 分数映射：拉大区分度，让 S/A 和 C/D 之间差距更明显
+  const gradeMap: Record<string, number> = { S: 95, A: 82, B: 65, C: 38, D: 18 }
   const dimensionMap: Record<string, string[]> = {
-    analytical: ['分析力', '分析', '判断'],
-    decisiveness: ['决断力', '决策', '果断'],
-    stakeholder: ['利益', '平衡', '相关方', '同理心'],
-    influence: ['沟通', '影响', '表达'],
-    strategic: ['战略', '格局', '全局'],
+    analytical: ['分析力', '分析', '判断', '分析判断'],
+    decisiveness: ['决断力', '决策', '果断', '决策魄力'],
+    stakeholder: ['利益', '平衡', '相关方', '同理心', '利益相关方'],
+    influence: ['沟通', '影响', '表达', '沟通影响'],
+    strategic: ['战略', '格局', '全局', '战略格局'],
   }
   
   const matchKeys = dimensionMap[dimension] || []
   for (const tag of evalTags) {
     if (matchKeys.some(k => tag.dimension.includes(k))) {
-      return gradeMap[tag.grade] || 50
+      const baseScore = gradeMap[tag.grade] || 50
+      // 加入基于态度的微调（±8），让同等级内也有变化
+      const attitudeBonus = Math.round(
+        agents.reduce((sum, a) => sum + a.memory.attitude, 0) / Math.max(agents.length, 1) * 0.08
+      )
+      return Math.min(98, Math.max(10, baseScore + attitudeBonus))
     }
   }
 
+  // Fallback：没有 evalTags 时，基于 agent 态度和步数生成差异化分数
   const avgAttitude = agents.reduce((sum, a) => sum + a.memory.attitude, 0) / Math.max(agents.length, 1)
-  const base = 50
-  const jitter = Math.sin(dimension.length * 7) * 8
-  return Math.min(95, Math.max(15, Math.round(base + avgAttitude * 0.4 + jitter)))
+  // 不同维度使用不同的基准和权重，制造差异
+  const dimensionSeeds: Record<string, { base: number; attWeight: number; stepBonus: number }> = {
+    analytical: { base: 42, attWeight: 0.6, stepBonus: 3 },
+    decisiveness: { base: 35, attWeight: 0.5, stepBonus: 4 },
+    stakeholder: { base: 48, attWeight: 0.8, stepBonus: 2 },
+    influence: { base: 38, attWeight: 0.7, stepBonus: 3 },
+    strategic: { base: 30, attWeight: 0.4, stepBonus: 5 },
+  }
+  const seed = dimensionSeeds[dimension] || { base: 40, attWeight: 0.5, stepBonus: 3 }
+  const rawScore = seed.base + avgAttitude * seed.attWeight + stepCount * seed.stepBonus
+  // 加入基于维度名的确定性抖动（让各维度不完全同步变化）
+  const jitter = Math.sin(dimension.length * 13 + stepCount * 7) * 6
+  return Math.min(95, Math.max(12, Math.round(rawScore + jitter)))
 }
 
 function getPhaseInsights(agents: any[], stepCount: number, narrativeLog: any[]): React.ReactNode {
