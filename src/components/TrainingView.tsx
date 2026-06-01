@@ -6,6 +6,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { generateTrainingReport, reportToMarkdown, type TrainingReport } from '../engine/trainingReport'
+import MilestoneFeedbackCard from './MilestoneFeedback'
 
 export default function TrainingView() {
   const { world, player, narrativeLog, choices, isProcessing, performAction, phase } = useGameStore()
@@ -18,10 +19,10 @@ export default function TrainingView() {
   if (!world || !player) return null
 
   const stepCount = player.steps
-  const maxSteps = 15
+  const maxSteps = 8
   const progressPercent = (stepCount / maxSteps) * 100
   
-  const phaseIndex = stepCount <= 4 ? 0 : stepCount <= 10 ? 1 : 2
+  const phaseIndex = stepCount <= 2 ? 0 : stepCount <= 5 ? 1 : 2
 
   const lastNarrative = narrativeLog.filter(l => l.type === 'narrative').slice(-1)[0]?.text || ''
   const evalTags = parseEvalTags(lastNarrative)
@@ -126,6 +127,9 @@ export default function TrainingView() {
               )}
             </div>
           </div>
+
+          {/* Milestone Feedback */}
+          <MilestoneFeedbackCard />
 
           {/* Decision Input */}
           <div className="rounded-xl p-4 space-y-4 bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
@@ -260,7 +264,7 @@ export default function TrainingView() {
             </div>
           </div>
 
-          {stepCount >= 5 && (
+          {stepCount >= 3 && (
             <div className="bg-amber-500/[0.08] border border-amber-400/20 rounded-xl p-3">
               <h3 className="text-xs text-amber-300 font-medium mb-2">阶段观察</h3>
               <div className="text-xs text-white/50 space-y-1 leading-relaxed">
@@ -447,7 +451,7 @@ function getPhaseInsights(agents: any[], stepCount: number, narrativeLog: any[])
   if (decisionCount < stepCount * 0.6) {
     insights.push('决策频率偏低，可能有犹豫倾向')
   }
-  if (stepCount >= 10) {
+  if (stepCount >= 6) {
     insights.push('进入收敛阶段，需开始整合各方意见')
   }
   

@@ -14,6 +14,7 @@ import { callGemini } from '../api/gemini'
 import { validateAndCorrect, checkRuleTriggers, markRulesFired } from './ruleEngine'
 import { type ScenarioMode, getScenarioConfig } from './scenarios'
 import { retainWithImportance } from './agentLoop'
+import { getMilestonePromptInjection } from './milestoneFeedback'
 
 /**
  * Get agents within Manhattan distance 2 of a position
@@ -139,6 +140,10 @@ export async function processAction(
   const nearbyAgents = getNearbyAgents(world.agents, player.position)
   const config = getScenarioConfig(mode)
 
+  // 注入里程碑反馈提示词（在关键轮次追加到 actionModifier）
+  const milestoneInjection = getMilestonePromptInjection(player.steps + 1, mode)
+  const combinedModifier = [config.actionModifier, milestoneInjection].filter(Boolean).join('\n') || undefined
+
   const prompt = buildActionPrompt(
     world,
     player,
@@ -146,7 +151,7 @@ export async function processAction(
     nearbyAgents,
     recentEvents,
     player.steps,
-    config.actionModifier || undefined,
+    combinedModifier,
     mode
   )
 

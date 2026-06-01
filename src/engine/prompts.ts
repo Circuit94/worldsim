@@ -162,7 +162,7 @@ function buildTrainingActionPrompt(
     return `- ${a.name}（id: ${a.id}）| 角色: ${a.persona.slice(0, 80)} | 态度: ${a.memory.attitude}/100 | 近期认知: ${recentObs || '初始状态'}`
   }).join('\n')
 
-  const maxSteps = 15
+  const maxSteps = 8
 
   return `你是一个管理情景模拟评估系统。根据决策者的行动推进情景发展。
 
@@ -237,7 +237,7 @@ function buildSimulationActionPrompt(
     return `- ${a.name}（id: ${a.id}）| 决策模型: ${a.decisionStyle} | 目标: ${a.goals.join('、')} | 态度: ${a.memory.attitude}/100 | 近期状态: ${recentObs || '初始状态'}`
   }).join('\n')
 
-  const maxSteps = 20
+  const maxSteps = 12
 
   return `你是一个多智能体仿真推演引擎。执行第 ${stepCount + 1}/${maxSteps} 轮自主推演。
 

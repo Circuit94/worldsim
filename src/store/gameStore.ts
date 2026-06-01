@@ -15,6 +15,7 @@ import { executeAgentTick, applyAgentTick } from '../engine/agentLoop'
 import { initGemini, type GeminiModel } from '../api/gemini'
 import { type ScenarioMode, getScenarioConfig } from '../engine/scenarios'
 import { autoSave } from '../engine/persistence'
+import { type MilestoneFeedback, shouldTriggerMilestone, parseMilestoneFeedback, generateLocalMilestone, stripMilestoneTag } from '../engine/milestoneFeedback'
 
 /**
  * 根据模式生成初始选项
@@ -55,7 +56,7 @@ function getInitialNarrativeLog(
         { text: `仿真实验初始化 — ${world.name}`, type: 'system' },
         { text: world.description, type: 'narrative' },
         { text: `观测目标：${world.winCondition}`, type: 'system' },
-        { text: `智能体数量：${world.agents.length} · 最大轮次：20 · 状态：就绪`, type: 'system' },
+        { text: `智能体数量：${world.agents.length} · 最大轮次：12 · 状态：就绪`, type: 'system' },
       ]
     case 'game':
     default:
@@ -94,6 +95,9 @@ interface GameState {
   // Runtime config (editable during play)
   runtimeConfig: WorldConfig
 
+  // Milestone feedback
+  milestoneFeedback: MilestoneFeedback | null
+
   // Actions
   setApiKey: (key: string, model?: GeminiModel) => void
   startGame: (theme: string, mode?: ScenarioMode, worldConfig?: WorldConfig) => Promise<void>
@@ -101,6 +105,9 @@ interface GameState {
   toggleDebug: () => void
   exportSession: () => SessionData | null
   reset: () => void
+
+  // Milestone actions
+  dismissMilestone: () => void
 
   // Runtime editing actions
   updateAgent: (agentId: string, updates: Partial<{ persona: string; goals: string[]; decisionStyle: string; attitude: number }>) => void
@@ -122,6 +129,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   scenarioMode: 'game',
   totalTokensUsed: 0,
   runtimeConfig: { ...DEFAULT_WORLD_CONFIG },
+  milestoneFeedback: null,
 
   setApiKey: (key: string, model?: GeminiModel) => {
     initGemini(key, model)
@@ -263,15 +271,33 @@ export const useGameStore = create<GameState>((set, get) => ({
       const newTotalTokens = totalTokensUsed + debug.promptTokens + debug.responseTokens + agentTokens
       const newChoices = response.gameOver ? [] : response.choices
 
+      // 里程碑反馈检测
+      let milestone: MilestoneFeedback | null = null
+      const nextStep = newPlayer.steps // steps already incremented by applyEffects
+      if (shouldTriggerMilestone(nextStep, scenarioMode)) {
+        // 尝试从 LLM 输出解析里程碑
+        milestone = parseMilestoneFeedback(response.narrative, nextStep, scenarioMode, finalWorld, newPlayer)
+        // 如果 LLM 没有输出里程碑标记，使用本地 fallback
+        if (!milestone) {
+          milestone = generateLocalMilestone(nextStep, scenarioMode, finalWorld, newPlayer, newNarrativeLog)
+        }
+      }
+
+      // 清理 narrative 中的里程碑标记（不在日志中显示原始标记）
+      const cleanedLogs = newNarrativeLog.map(log => 
+        log.type === 'narrative' ? { ...log, text: stripMilestoneTag(log.text) } : log
+      )
+
       set({
         world: finalWorld,
         player: newPlayer,
-        narrativeLog: newNarrativeLog,
+        narrativeLog: cleanedLogs,
         choices: newChoices,
         phase: response.gameOver ? 'gameover' : 'playing',
         debugLogs: [...debugLogs, debug, ...agentDebug],
         totalTokensUsed: newTotalTokens,
         isProcessing: false,
+        milestoneFeedback: milestone,
       })
 
       // Auto-save after each successful action
@@ -320,7 +346,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     scenarioMode: 'game',
     totalTokensUsed: 0,
     runtimeConfig: { ...DEFAULT_WORLD_CONFIG },
+    milestoneFeedback: null,
   }),
+
+  dismissMilestone: () => set({ milestoneFeedback: null }),
 
   // Runtime editing actions — modify world state during gameplay
   updateAgent: (agentId, updates) => {

@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { getAgentVisual } from '../engine/tileVisuals'
+import MilestoneFeedbackCard from './MilestoneFeedback'
 
 export default function SimulationView() {
   const { world, player, narrativeLog, isProcessing, performAction, phase, exportSession } = useGameStore()
@@ -18,7 +19,7 @@ export default function SimulationView() {
   if (!world || !player) return null
 
   const stepCount = player.steps
-  const maxSteps = 20
+  const maxSteps = 12
   const progressPercent = (stepCount / maxSteps) * 100
 
   useEffect(() => {
@@ -181,6 +182,9 @@ export default function SimulationView() {
               </div>
             </div>
           )}
+
+          {/* Milestone Feedback */}
+          <MilestoneFeedbackCard />
         </div>
 
         {/* Right: Agent Status + Metrics */}

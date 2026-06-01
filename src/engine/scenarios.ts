@@ -151,7 +151,7 @@ export const SCENARIO_CONFIGS: Record<ScenarioMode, ScenarioConfig> = {
    - rule的effect必须制造新的决策压力
    - 不允许空间移动类规则
 
-4. winCondition：描述评估目标而非"胜利条件"（如"在15轮内制定出各方可接受的解决方案"）
+4. winCondition：描述评估目标而非"胜利条件"（如"在8轮内制定出各方可接受的解决方案"）
 
 5. 所有文本必须为中文`,
     actionModifier: `
@@ -197,7 +197,7 @@ export const SCENARIO_CONFIGS: Record<ScenarioMode, ScenarioConfig> = {
     showMap: false,
     showScore: true,
     autoRun: false,
-    maxSteps: 15,
+    maxSteps: 8,
   },
 
   // ——————————————————————————————————
@@ -330,7 +330,7 @@ export const SCENARIO_CONFIGS: Record<ScenarioMode, ScenarioConfig> = {
     showMap: false,
     showScore: false,
     autoRun: true,
-    maxSteps: 20,
+    maxSteps: 12,
   },
 }
 

@@ -14,6 +14,7 @@ import AnalyticsPanel from './components/AnalyticsPanel'
 import TrainingView from './components/TrainingView'
 import SimulationView from './components/SimulationView'
 import RuntimeEditor from './components/RuntimeEditor'
+import MilestoneFeedbackCard from './components/MilestoneFeedback'
 
 export default function App() {
   const { phase, world, scenarioMode } = useGameStore()
@@ -180,6 +181,7 @@ export default function App() {
               <GameMap />
               <StatusBar />
               <NarrativeLog />
+              <MilestoneFeedbackCard />
               {showAnalytics && (
                 <div className="lg:hidden">
                   <AnalyticsPanel />
